@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Copy } from 'lucide-react';
 
 interface XMLData {
   rfc?: string;
@@ -110,6 +111,14 @@ export const XMLUploader = () => {
     setXmlData([]);
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copiado",
+      description: "Texto copiado al portapapeles",
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card className="shadow-lg border-0" style={{ boxShadow: 'var(--shadow-elegant)' }}>
@@ -162,74 +171,121 @@ export const XMLUploader = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {xmlData.map((data, index) => (
-                <div key={index} className="p-4 bg-muted/30 rounded-lg border border-muted-foreground/10">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText className="w-4 h-4 text-primary" />
-                    <span className="font-medium text-sm text-foreground">{data.fileName}</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">RFC Emisor</label>
-                      <div className="flex items-center gap-2 mt-1">
-                        {data.emisorRfc ? (
-                          <>
-                            <CheckCircle className="w-4 h-4 text-success" />
-                            <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
-                              {data.emisorRfc}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="w-4 h-4 text-destructive" />
-                            <span className="text-sm text-muted-foreground">No encontrado</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
+            <div className="rounded-md border border-muted">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-muted/50">
+                    <TableHead className="font-semibold">Archivo</TableHead>
+                    <TableHead className="font-semibold">RFC Emisor</TableHead>
+                    <TableHead className="font-semibold">RFC Receptor</TableHead>
+                    <TableHead className="font-semibold">UUID</TableHead>
+                    <TableHead className="w-[100px] font-semibold">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {xmlData.map((data, index) => (
+                    <TableRow key={index} className="hover:bg-muted/30">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-primary" />
+                          <span className="text-sm">{data.fileName}</span>
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {data.emisorRfc ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-success" />
+                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
+                                {data.emisorRfc}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => copyToClipboard(data.emisorRfc!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-destructive" />
+                              <span className="text-sm text-muted-foreground">No encontrado</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
 
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">RFC Receptor</label>
-                      <div className="flex items-center gap-2 mt-1">
-                        {data.receptorRfc ? (
-                          <>
-                            <CheckCircle className="w-4 h-4 text-success" />
-                            <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
-                              {data.receptorRfc}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="w-4 h-4 text-destructive" />
-                            <span className="text-sm text-muted-foreground">No encontrado</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {data.receptorRfc ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-success" />
+                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
+                                {data.receptorRfc}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => copyToClipboard(data.receptorRfc!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-destructive" />
+                              <span className="text-sm text-muted-foreground">No encontrado</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
 
-                    <div className="md:col-span-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">UUID</label>
-                      <div className="flex items-center gap-2 mt-1">
-                        {data.uuid ? (
-                          <>
-                            <CheckCircle className="w-4 h-4 text-success" />
-                            <span className="font-mono text-sm bg-background px-2 py-1 rounded border break-all">
-                              {data.uuid}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="w-4 h-4 text-destructive" />
-                            <span className="text-sm text-muted-foreground">No encontrado</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                      <TableCell>
+                        <div className="flex items-center gap-2 max-w-xs">
+                          {data.uuid ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
+                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border truncate">
+                                {data.uuid}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 flex-shrink-0"
+                                onClick={() => copyToClipboard(data.uuid!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-destructive" />
+                              <span className="text-sm text-muted-foreground">No encontrado</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const allData = `Archivo: ${data.fileName}\nRFC Emisor: ${data.emisorRfc || 'No encontrado'}\nRFC Receptor: ${data.receptorRfc || 'No encontrado'}\nUUID: ${data.uuid || 'No encontrado'}`;
+                            copyToClipboard(allData);
+                          }}
+                        >
+                          Copiar todo
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
