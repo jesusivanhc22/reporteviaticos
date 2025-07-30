@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, CheckCircle, AlertCircle, Copy } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Copy, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface XMLData {
   rfc?: string;
@@ -119,6 +120,54 @@ export const XMLUploader = () => {
     });
   };
 
+  const exportToExcel = () => {
+    if (xmlData.length === 0) {
+      toast({
+        title: "Sin datos",
+        description: "No hay datos para exportar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Preparar los datos para Excel
+    const excelData = xmlData.map((data, index) => ({
+      'No.': index + 1,
+      'Archivo': data.fileName,
+      'RFC Emisor': data.emisorRfc || 'No encontrado',
+      'RFC Receptor': data.receptorRfc || 'No encontrado',
+      'UUID': data.uuid || 'No encontrado'
+    }));
+
+    // Crear el libro de trabajo
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Datos XML");
+
+    // Ajustar el ancho de las columnas
+    const columnWidths = [
+      { wch: 5 },   // No.
+      { wch: 30 },  // Archivo
+      { wch: 15 },  // RFC Emisor
+      { wch: 15 },  // RFC Receptor
+      { wch: 40 }   // UUID
+    ];
+    worksheet['!cols'] = columnWidths;
+
+    // Generar el nombre del archivo con fecha y hora
+    const now = new Date();
+    const timestamp = now.toISOString().slice(0, 19).replace(/:/g, '-');
+    const fileName = `datos_xml_${timestamp}.xlsx`;
+
+    // Descargar el archivo
+    XLSX.writeFile(workbook, fileName);
+
+    toast({
+      title: "Exportación exitosa",
+      description: `Archivo Excel descargado: ${fileName}`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card className="shadow-lg border-0" style={{ boxShadow: 'var(--shadow-elegant)' }}>
@@ -165,10 +214,20 @@ export const XMLUploader = () => {
       {xmlData.length > 0 && (
         <Card className="shadow-lg border-0" style={{ boxShadow: 'var(--shadow-elegant)' }}>
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <CheckCircle className="w-5 h-5 text-success" />
-              Datos Extraídos
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <CheckCircle className="w-5 h-5 text-success" />
+                Datos Extraídos
+              </CardTitle>
+              <Button 
+                onClick={exportToExcel}
+                className="bg-success hover:bg-success/90 text-success-foreground"
+                size="sm"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Exportar a Excel
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border border-muted">
