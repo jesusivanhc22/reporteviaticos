@@ -15,7 +15,7 @@ interface XMLData {
   receptorRfc?: string;
   fecha?: string;
   subtotal?: string;
-  totalImpuestosTrasladados?: string;
+  impuestoIVA?: string;
   totalDeTraslados?: string;
   fileName: string;
 }
@@ -36,7 +36,7 @@ export const XMLUploader = () => {
     let receptorRfc = '';
     let fecha = '';
     let subtotal = '';
-    let totalImpuestosTrasladados = '';
+    let impuestoIVA = '';
     let totalDeTraslados = '';
 
     // Buscar UUID (TimbreFiscalDigital o atributo UUID)
@@ -69,20 +69,32 @@ export const XMLUploader = () => {
       receptorRfc = receptor.getAttribute('Rfc') || receptor.getAttribute('rfc') || '';
     }
 
-    // Buscar totales de impuestos en el nodo Impuestos
-    const impuestos = xmlDoc.querySelector('Impuestos');
-    if (impuestos) {
-      totalImpuestosTrasladados = impuestos.getAttribute('TotalImpuestosTrasladados') || '';
-      // También buscar variantes del nombre
-      if (!totalImpuestosTrasladados) {
-        totalImpuestosTrasladados = impuestos.getAttribute('totalImpuestosTrasladados') || '';
+    // Buscar específicamente el impuesto IVA en los traslados
+    const traslados = xmlDoc.querySelectorAll('Traslado');
+    traslados.forEach(traslado => {
+      const impuesto = traslado.getAttribute('Impuesto') || traslado.getAttribute('impuesto');
+      // 002 es el código del IVA en México
+      if (impuesto === '002') {
+        impuestoIVA = traslado.getAttribute('Importe') || 
+                     traslado.getAttribute('importe') || 
+                     traslado.getAttribute('Valor') || 
+                     traslado.getAttribute('valor') || '';
       }
-      
-      // Buscar TotalDeTraslados (puede estar en diferentes formatos)
-      totalDeTraslados = impuestos.getAttribute('TotalDeTraslados') || 
-                        impuestos.getAttribute('totalDeTraslados') || 
-                        impuestos.getAttribute('TotalTraslados') || 
-                        impuestos.getAttribute('totalTraslados') || '';
+    });
+
+    // Si no se encuentra en traslados, buscar en el nodo Impuestos como fallback
+    if (!impuestoIVA) {
+      const impuestos = xmlDoc.querySelector('Impuestos');
+      if (impuestos) {
+        // Intentar obtener el total si solo hay IVA
+        impuestoIVA = impuestos.getAttribute('TotalImpuestosTrasladados') || '';
+        
+        // Buscar TotalDeTraslados
+        totalDeTraslados = impuestos.getAttribute('TotalDeTraslados') || 
+                          impuestos.getAttribute('totalDeTraslados') || 
+                          impuestos.getAttribute('TotalTraslados') || 
+                          impuestos.getAttribute('totalTraslados') || '';
+      }
     }
 
     return {
@@ -92,7 +104,7 @@ export const XMLUploader = () => {
       receptorRfc,
       fecha,
       subtotal,
-      totalImpuestosTrasladados,
+      impuestoIVA,
       totalDeTraslados,
       fileName
     };
@@ -172,7 +184,7 @@ export const XMLUploader = () => {
       'UUID': data.uuid || 'No encontrado',
       'Fecha': data.fecha || 'No encontrado',
       'Subtotal': data.subtotal || 'No encontrado',
-      'Impuestos TotalImpuestosTrasladados': data.totalImpuestosTrasladados || 'No encontrado',
+      'Impuesto IVA': data.impuestoIVA || 'No encontrado',
       'TrasladosLocales': data.totalDeTraslados || 'No encontrado'
     }));
 
@@ -190,7 +202,7 @@ export const XMLUploader = () => {
       { wch: 40 },  // UUID
       { wch: 20 },  // Fecha
       { wch: 15 },  // Subtotal
-      { wch: 35 },  // Impuestos TotalImpuestosTrasladados
+      { wch: 15 },  // Impuesto IVA
       { wch: 20 }   // TrasladosLocales
     ];
     worksheet['!cols'] = columnWidths;
@@ -281,7 +293,7 @@ export const XMLUploader = () => {
                     <TableHead className="font-semibold">UUID</TableHead>
                     <TableHead className="font-semibold">Fecha</TableHead>
                     <TableHead className="font-semibold">Subtotal</TableHead>
-                    <TableHead className="font-semibold">Impuestos TotalImpuestosTrasladados</TableHead>
+                    <TableHead className="font-semibold">Impuesto IVA</TableHead>
                     <TableHead className="font-semibold">TrasladosLocales</TableHead>
                     <TableHead className="w-[100px] font-semibold">Acciones</TableHead>
                   </TableRow>
@@ -428,17 +440,17 @@ export const XMLUploader = () => {
 
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {data.totalImpuestosTrasladados ? (
+                          {data.impuestoIVA ? (
                             <>
                               <CheckCircle className="w-4 h-4 text-success" />
                               <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
-                                ${data.totalImpuestosTrasladados}
+                                ${data.impuestoIVA}
                               </span>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 w-6 p-0"
-                                onClick={() => copyToClipboard(data.totalImpuestosTrasladados!)}
+                                onClick={() => copyToClipboard(data.impuestoIVA!)}
                               >
                                 <Copy className="w-3 h-3" />
                               </Button>
@@ -483,7 +495,7 @@ export const XMLUploader = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const allData = `Archivo: ${data.fileName}\nRFC Emisor: ${data.emisorRfc || 'No encontrado'}\nRFC Receptor: ${data.receptorRfc || 'No encontrado'}\nUUID: ${data.uuid || 'No encontrado'}\nFecha: ${data.fecha || 'No encontrado'}\nSubtotal: ${data.subtotal || 'No encontrado'}\nTotal Impuestos Trasladados: ${data.totalImpuestosTrasladados || 'No encontrado'}\nTotal de Traslados: ${data.totalDeTraslados || 'No encontrado'}`;
+                            const allData = `Archivo: ${data.fileName}\nRFC Emisor: ${data.emisorRfc || 'No encontrado'}\nRFC Receptor: ${data.receptorRfc || 'No encontrado'}\nUUID: ${data.uuid || 'No encontrado'}\nFecha: ${data.fecha || 'No encontrado'}\nSubtotal: ${data.subtotal || 'No encontrado'}\nImpuesto IVA: ${data.impuestoIVA || 'No encontrado'}\nTrasladosLocales: ${data.totalDeTraslados || 'No encontrado'}`;
                             copyToClipboard(allData);
                           }}
                         >
