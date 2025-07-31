@@ -172,8 +172,8 @@ export const XMLUploader = () => {
       'UUID': data.uuid || 'No encontrado',
       'Fecha': data.fecha || 'No encontrado',
       'Subtotal': data.subtotal || 'No encontrado',
-      'Total Impuestos Trasladados': data.totalImpuestosTrasladados || 'No encontrado',
-      'Total de Traslados': data.totalDeTraslados || 'No encontrado'
+      'Impuestos TotalImpuestosTrasladados': data.totalImpuestosTrasladados || 'No encontrado',
+      'TrasladosLocales': data.totalDeTraslados || 'No encontrado'
     }));
 
     // Crear el libro de trabajo
@@ -190,8 +190,8 @@ export const XMLUploader = () => {
       { wch: 40 },  // UUID
       { wch: 20 },  // Fecha
       { wch: 15 },  // Subtotal
-      { wch: 25 },  // Total Impuestos Trasladados
-      { wch: 20 }   // Total de Traslados
+      { wch: 35 },  // Impuestos TotalImpuestosTrasladados
+      { wch: 20 }   // TrasladosLocales
     ];
     worksheet['!cols'] = columnWidths;
 
@@ -281,8 +281,8 @@ export const XMLUploader = () => {
                     <TableHead className="font-semibold">UUID</TableHead>
                     <TableHead className="font-semibold">Fecha</TableHead>
                     <TableHead className="font-semibold">Subtotal</TableHead>
-                    <TableHead className="font-semibold">Total Imp. Trasl.</TableHead>
-                    <TableHead className="font-semibold">Total Traslados</TableHead>
+                    <TableHead className="font-semibold">Impuestos TotalImpuestosTrasladados</TableHead>
+                    <TableHead className="font-semibold">TrasladosLocales</TableHead>
                     <TableHead className="w-[100px] font-semibold">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
