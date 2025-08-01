@@ -16,7 +16,7 @@ interface XMLData {
   fecha?: string;
   subtotal?: string;
   impuestoIVA?: string;
-  totalDeTraslados?: string;
+  impuestoISH?: string;
   fileName: string;
 }
 
@@ -37,7 +37,7 @@ export const XMLUploader = () => {
     let fecha = '';
     let subtotal = '';
     let impuestoIVA = '';
-    let totalDeTraslados = '';
+    let impuestoISH = '';
 
     // Buscar UUID (TimbreFiscalDigital o atributo UUID)
     const timbreFiscal = xmlDoc.querySelector('TimbreFiscalDigital');
@@ -69,13 +69,20 @@ export const XMLUploader = () => {
       receptorRfc = receptor.getAttribute('Rfc') || receptor.getAttribute('rfc') || '';
     }
 
-    // Buscar específicamente el impuesto IVA en los traslados
+    // Buscar impuestos específicos en los traslados
     const traslados = xmlDoc.querySelectorAll('Traslado');
     traslados.forEach(traslado => {
       const impuesto = traslado.getAttribute('Impuesto') || traslado.getAttribute('impuesto');
       // 002 es el código del IVA en México
       if (impuesto === '002') {
         impuestoIVA = traslado.getAttribute('Importe') || 
+                     traslado.getAttribute('importe') || 
+                     traslado.getAttribute('Valor') || 
+                     traslado.getAttribute('valor') || '';
+      }
+      // 003 es el código del ISH (Impuesto Sobre Hospedaje) en México
+      if (impuesto === '003') {
+        impuestoISH = traslado.getAttribute('Importe') || 
                      traslado.getAttribute('importe') || 
                      traslado.getAttribute('Valor') || 
                      traslado.getAttribute('valor') || '';
@@ -88,12 +95,6 @@ export const XMLUploader = () => {
       if (impuestos) {
         // Intentar obtener el total si solo hay IVA
         impuestoIVA = impuestos.getAttribute('TotalImpuestosTrasladados') || '';
-        
-        // Buscar TotalDeTraslados
-        totalDeTraslados = impuestos.getAttribute('TotalDeTraslados') || 
-                          impuestos.getAttribute('totalDeTraslados') || 
-                          impuestos.getAttribute('TotalTraslados') || 
-                          impuestos.getAttribute('totalTraslados') || '';
       }
     }
 
@@ -105,7 +106,7 @@ export const XMLUploader = () => {
       fecha,
       subtotal,
       impuestoIVA,
-      totalDeTraslados,
+      impuestoISH,
       fileName
     };
   };
@@ -185,7 +186,7 @@ export const XMLUploader = () => {
       'Fecha': data.fecha || 'No encontrado',
       'Subtotal': data.subtotal || 'No encontrado',
       'Impuesto IVA': data.impuestoIVA || 'No encontrado',
-      'TrasladosLocales': data.totalDeTraslados || 'No encontrado'
+      'Impuesto ISH': data.impuestoISH || 'No encontrado'
     }));
 
     // Crear el libro de trabajo
@@ -203,7 +204,7 @@ export const XMLUploader = () => {
       { wch: 20 },  // Fecha
       { wch: 15 },  // Subtotal
       { wch: 15 },  // Impuesto IVA
-      { wch: 20 }   // TrasladosLocales
+      { wch: 20 }   // Impuesto ISH
     ];
     worksheet['!cols'] = columnWidths;
 
@@ -294,7 +295,7 @@ export const XMLUploader = () => {
                     <TableHead className="font-semibold">Fecha</TableHead>
                     <TableHead className="font-semibold">Subtotal</TableHead>
                     <TableHead className="font-semibold">Impuesto IVA</TableHead>
-                    <TableHead className="font-semibold">TrasladosLocales</TableHead>
+                    <TableHead className="font-semibold">Impuesto ISH</TableHead>
                     <TableHead className="w-[100px] font-semibold">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -466,17 +467,17 @@ export const XMLUploader = () => {
 
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {data.totalDeTraslados ? (
+                          {data.impuestoISH ? (
                             <>
                               <CheckCircle className="w-4 h-4 text-success" />
                               <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
-                                ${data.totalDeTraslados}
+                                ${data.impuestoISH}
                               </span>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 w-6 p-0"
-                                onClick={() => copyToClipboard(data.totalDeTraslados!)}
+                                onClick={() => copyToClipboard(data.impuestoISH!)}
                               >
                                 <Copy className="w-3 h-3" />
                               </Button>
@@ -495,7 +496,7 @@ export const XMLUploader = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const allData = `Archivo: ${data.fileName}\nRFC Emisor: ${data.emisorRfc || 'No encontrado'}\nRFC Receptor: ${data.receptorRfc || 'No encontrado'}\nUUID: ${data.uuid || 'No encontrado'}\nFecha: ${data.fecha || 'No encontrado'}\nSubtotal: ${data.subtotal || 'No encontrado'}\nImpuesto IVA: ${data.impuestoIVA || 'No encontrado'}\nTrasladosLocales: ${data.totalDeTraslados || 'No encontrado'}`;
+                            const allData = `Archivo: ${data.fileName}\nRFC Emisor: ${data.emisorRfc || 'No encontrado'}\nRFC Receptor: ${data.receptorRfc || 'No encontrado'}\nUUID: ${data.uuid || 'No encontrado'}\nFecha: ${data.fecha || 'No encontrado'}\nSubtotal: ${data.subtotal || 'No encontrado'}\nImpuesto IVA: ${data.impuestoIVA || 'No encontrado'}\nImpuesto ISH: ${data.impuestoISH || 'No encontrado'}`;
                             copyToClipboard(allData);
                           }}
                         >
