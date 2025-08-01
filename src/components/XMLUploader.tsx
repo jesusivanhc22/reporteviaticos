@@ -73,19 +73,51 @@ export const XMLUploader = () => {
     const traslados = xmlDoc.querySelectorAll('Traslado');
     traslados.forEach(traslado => {
       const impuesto = traslado.getAttribute('Impuesto') || traslado.getAttribute('impuesto');
+      const importe = traslado.getAttribute('Importe') || 
+                     traslado.getAttribute('importe') || 
+                     traslado.getAttribute('Valor') || 
+                     traslado.getAttribute('valor') || '';
+      
       // 002 es el código del IVA en México
       if (impuesto === '002') {
-        impuestoIVA = traslado.getAttribute('Importe') || 
-                     traslado.getAttribute('importe') || 
-                     traslado.getAttribute('Valor') || 
-                     traslado.getAttribute('valor') || '';
+        impuestoIVA = importe;
       }
       // 003 es el código del ISH (Impuesto Sobre Hospedaje) en México
-      if (impuesto === '003') {
-        impuestoISH = traslado.getAttribute('Importe') || 
-                     traslado.getAttribute('importe') || 
-                     traslado.getAttribute('Valor') || 
-                     traslado.getAttribute('valor') || '';
+      // También buscar ISH por nombre o otros códigos posibles
+      if (impuesto === '003' || impuesto === 'ISH' || impuesto === 'ish') {
+        impuestoISH = importe;
+      }
+    });
+
+    // Buscar ISH en retenciones también
+    const retenciones = xmlDoc.querySelectorAll('Retencion');
+    retenciones.forEach(retencion => {
+      const impuesto = retencion.getAttribute('Impuesto') || retencion.getAttribute('impuesto');
+      const importe = retencion.getAttribute('Importe') || 
+                     retencion.getAttribute('importe') || 
+                     retencion.getAttribute('Valor') || 
+                     retencion.getAttribute('valor') || '';
+      
+      if (impuesto === '003' || impuesto === 'ISH' || impuesto === 'ish') {
+        impuestoISH = importe;
+      }
+    });
+
+    // Buscar ISH en impuestos locales
+    const impuestosLocales = xmlDoc.querySelectorAll('ImpuestoLocal');
+    impuestosLocales.forEach(impuestoLocal => {
+      const tipoImpuesto = impuestoLocal.getAttribute('ImpLocTrasladado') || 
+                          impuestoLocal.getAttribute('impLocTrasladado') ||
+                          impuestoLocal.getAttribute('TipoDeImpuesto') ||
+                          impuestoLocal.getAttribute('tipoDeImpuesto') || '';
+      const importe = impuestoLocal.getAttribute('Importe') || 
+                     impuestoLocal.getAttribute('importe') || '';
+      
+      // Buscar ISH por nombre completo o abreviación
+      if (tipoImpuesto.toLowerCase().includes('hospedaje') || 
+          tipoImpuesto.toLowerCase().includes('ish') ||
+          tipoImpuesto === '003') {
+        impuestoISH = importe;
       }
     });
 
