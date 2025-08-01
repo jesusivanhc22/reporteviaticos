@@ -70,42 +70,53 @@ export const XMLUploader = () => {
     }
 
     // Buscar impuestos específicos en los traslados
+    console.log('=== Iniciando búsqueda de ISH ===');
     const traslados = xmlDoc.querySelectorAll('Traslado');
-    traslados.forEach(traslado => {
+    console.log('Traslados encontrados:', traslados.length);
+    traslados.forEach((traslado, index) => {
       const impuesto = traslado.getAttribute('Impuesto') || traslado.getAttribute('impuesto');
       const importe = traslado.getAttribute('Importe') || 
                      traslado.getAttribute('importe') || 
                      traslado.getAttribute('Valor') || 
                      traslado.getAttribute('valor') || '';
       
+      console.log(`Traslado ${index + 1}:`, { impuesto, importe });
+      
       // 002 es el código del IVA en México
       if (impuesto === '002') {
         impuestoIVA = importe;
+        console.log('IVA encontrado:', importe);
       }
       // 003 es el código del ISH (Impuesto Sobre Hospedaje) en México
       // También buscar ISH por nombre o otros códigos posibles
       if (impuesto === '003' || impuesto === 'ISH' || impuesto === 'ish') {
         impuestoISH = importe;
+        console.log('ISH encontrado en traslados:', importe);
       }
     });
 
     // Buscar ISH en retenciones también
     const retenciones = xmlDoc.querySelectorAll('Retencion');
-    retenciones.forEach(retencion => {
+    console.log('Retenciones encontradas:', retenciones.length);
+    retenciones.forEach((retencion, index) => {
       const impuesto = retencion.getAttribute('Impuesto') || retencion.getAttribute('impuesto');
       const importe = retencion.getAttribute('Importe') || 
                      retencion.getAttribute('importe') || 
                      retencion.getAttribute('Valor') || 
                      retencion.getAttribute('valor') || '';
       
+      console.log(`Retención ${index + 1}:`, { impuesto, importe });
+      
       if (impuesto === '003' || impuesto === 'ISH' || impuesto === 'ish') {
         impuestoISH = importe;
+        console.log('ISH encontrado en retenciones:', importe);
       }
     });
 
     // Buscar ISH en impuestos locales
     const impuestosLocales = xmlDoc.querySelectorAll('ImpuestoLocal');
-    impuestosLocales.forEach(impuestoLocal => {
+    console.log('Impuestos locales encontrados:', impuestosLocales.length);
+    impuestosLocales.forEach((impuestoLocal, index) => {
       const tipoImpuesto = impuestoLocal.getAttribute('ImpLocTrasladado') || 
                           impuestoLocal.getAttribute('impLocTrasladado') ||
                           impuestoLocal.getAttribute('TipoDeImpuesto') ||
@@ -113,11 +124,14 @@ export const XMLUploader = () => {
       const importe = impuestoLocal.getAttribute('Importe') || 
                      impuestoLocal.getAttribute('importe') || '';
       
+      console.log(`Impuesto Local ${index + 1}:`, { tipoImpuesto, importe });
+      
       // Buscar ISH por nombre completo o abreviación
       if (tipoImpuesto.toLowerCase().includes('hospedaje') || 
           tipoImpuesto.toLowerCase().includes('ish') ||
           tipoImpuesto === '003') {
         impuestoISH = importe;
+        console.log('ISH encontrado en impuestos locales:', importe);
       }
     });
 
@@ -132,17 +146,39 @@ export const XMLUploader = () => {
 
     // Si no se encuentra ISH en ningún lado, buscar en TotaldeRetenciones como fallback
     if (!impuestoISH) {
+      console.log('ISH no encontrado, buscando en TotaldeRetenciones...');
       const impuestos = xmlDoc.querySelector('Impuestos');
       if (impuestos) {
+        console.log('Nodo Impuestos encontrado, verificando atributos...');
         // Buscar TotaldeRetenciones con diferentes variaciones de nombre
-        impuestoISH = impuestos.getAttribute('TotaldeRetenciones') || 
-                     impuestos.getAttribute('TotalRetenciones') ||
-                     impuestos.getAttribute('TotalImpuestosRetenidos') ||
-                     impuestos.getAttribute('totaldeRetenciones') ||
-                     impuestos.getAttribute('totalRetenciones') ||
-                     impuestos.getAttribute('totalImpuestosRetenidos') || '';
+        const totalRetenciones = impuestos.getAttribute('TotaldeRetenciones') || 
+                                impuestos.getAttribute('TotalRetenciones') ||
+                                impuestos.getAttribute('TotalImpuestosRetenidos') ||
+                                impuestos.getAttribute('totaldeRetenciones') ||
+                                impuestos.getAttribute('totalRetenciones') ||
+                                impuestos.getAttribute('totalImpuestosRetenidos') || '';
+        
+        console.log('TotaldeRetenciones encontrado:', totalRetenciones);
+        if (totalRetenciones) {
+          impuestoISH = totalRetenciones;
+          console.log('ISH asignado desde TotaldeRetenciones:', totalRetenciones);
+        }
+        
+        // También buscar cualquier atributo que contenga "105.86"
+        const todosLosAtributos = impuestos.getAttributeNames();
+        console.log('Todos los atributos del nodo Impuestos:', todosLosAtributos);
+        todosLosAtributos.forEach(atributo => {
+          const valor = impuestos.getAttribute(atributo);
+          console.log(`${atributo}: ${valor}`);
+          if (valor && valor.includes('105.86')) {
+            console.log(`¡Encontrado 105.86 en atributo ${atributo}!`);
+            impuestoISH = valor;
+          }
+        });
       }
     }
+
+    console.log('=== Resultado final ISH ===', impuestoISH);
 
     return {
       rfc,
