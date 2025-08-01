@@ -71,6 +71,17 @@ export const XMLUploader = () => {
 
     // Buscar impuestos específicos en los traslados
     console.log('=== Iniciando búsqueda de ISH ===');
+    console.log('XML completo (primeros 2000 caracteres):', xmlString.substring(0, 2000));
+    
+    // Buscar directamente el valor 105.86 en todo el XML
+    if (xmlString.includes('105.86')) {
+      console.log('¡ENCONTRADO! El valor 105.86 SÍ está en el XML');
+      const lineasConValor = xmlString.split('\n').filter(linea => linea.includes('105.86'));
+      console.log('Líneas que contienen 105.86:', lineasConValor);
+    } else {
+      console.log('El valor 105.86 NO está en el XML como texto plano');
+    }
+    
     const traslados = xmlDoc.querySelectorAll('Traslado');
     console.log('Traslados encontrados:', traslados.length);
     traslados.forEach((traslado, index) => {
