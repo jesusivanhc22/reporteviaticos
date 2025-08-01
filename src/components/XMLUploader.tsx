@@ -71,16 +71,106 @@ export const XMLUploader = () => {
 
     // Buscar impuestos específicos en los traslados
     console.log('=== Iniciando búsqueda de ISH ===');
-    console.log('XML completo (primeros 2000 caracteres):', xmlString.substring(0, 2000));
     
-    // Buscar directamente el valor 105.86 en todo el XML
-    if (xmlString.includes('105.86')) {
-      console.log('¡ENCONTRADO! El valor 105.86 SÍ está en el XML');
-      const lineasConValor = xmlString.split('\n').filter(linea => linea.includes('105.86'));
-      console.log('Líneas que contienen 105.86:', lineasConValor);
-    } else {
-      console.log('El valor 105.86 NO está en el XML como texto plano');
-    }
+    // 1. BÚSQUEDA EN COMPLEMENTOS
+    console.log('1. Buscando en Complementos...');
+    const complementos = xmlDoc.querySelectorAll('Complemento, cfdi\\:Complemento');
+    console.log(`Complementos encontrados: ${complementos.length}`);
+    
+    complementos.forEach((complemento, index) => {
+      console.log(`Complemento ${index + 1}:`, complemento.outerHTML.substring(0, 200));
+      
+      // Buscar en todos los atributos del complemento
+      Array.from(complemento.attributes || []).forEach(attr => {
+        if (attr.value.includes('105.86') || attr.value.toLowerCase().includes('ish') || attr.value.toLowerCase().includes('hospedaje')) {
+          console.log(`¡ISH encontrado en complemento atributo ${attr.name}:`, attr.value);
+          impuestoISH = attr.value;
+        }
+      });
+      
+      // Buscar en nodos hijos del complemento
+      const childNodes = complemento.querySelectorAll('*');
+      childNodes.forEach(child => {
+        Array.from(child.attributes || []).forEach(attr => {
+          if (attr.value.includes('105.86') || attr.value.toLowerCase().includes('ish') || attr.value.toLowerCase().includes('hospedaje')) {
+            console.log(`¡ISH encontrado en complemento hijo ${child.tagName} atributo ${attr.name}:`, attr.value);
+            impuestoISH = attr.value;
+          }
+        });
+      });
+    });
+
+    // 2. BÚSQUEDA EN CONCEPTOS
+    console.log('2. Buscando en Conceptos...');
+    const conceptos = xmlDoc.querySelectorAll('Concepto, cfdi\\:Concepto');
+    console.log(`Conceptos encontrados: ${conceptos.length}`);
+    
+    conceptos.forEach((concepto, index) => {
+      console.log(`Concepto ${index + 1}:`, concepto.outerHTML.substring(0, 200));
+      
+      // Buscar en atributos del concepto
+      Array.from(concepto.attributes || []).forEach(attr => {
+        if (attr.value.includes('105.86') || attr.value.toLowerCase().includes('ish') || attr.value.toLowerCase().includes('hospedaje')) {
+          console.log(`¡ISH encontrado en concepto atributo ${attr.name}:`, attr.value);
+          impuestoISH = attr.value;
+        }
+      });
+      
+      // Buscar en impuestos del concepto
+      const impuestosConcepto = concepto.querySelectorAll('Traslado, Retencion, ImpuestoLocal');
+      impuestosConcepto.forEach(imp => {
+        Array.from(imp.attributes || []).forEach(attr => {
+          if (attr.value.includes('105.86') || attr.value.toLowerCase().includes('ish') || attr.value.toLowerCase().includes('hospedaje')) {
+            console.log(`¡ISH encontrado en impuesto de concepto atributo ${attr.name}:`, attr.value);
+            impuestoISH = attr.value;
+          }
+        });
+      });
+    });
+
+    // 3. BÚSQUEDA EXHAUSTIVA EN TODOS LOS NODOS
+    console.log('3. Búsqueda exhaustiva en todo el documento...');
+    const todosLosNodos = xmlDoc.querySelectorAll('*');
+    console.log(`Total de nodos a revisar: ${todosLosNodos.length}`);
+    
+    let encontrados = 0;
+    todosLosNodos.forEach((nodo, index) => {
+      Array.from(nodo.attributes || []).forEach(attr => {
+        if (attr.value.includes('105.86')) {
+          encontrados++;
+          console.log(`¡Valor 105.86 encontrado en nodo ${nodo.tagName} atributo ${attr.name}:`, attr.value);
+          console.log(`Contexto del nodo:`, nodo.outerHTML.substring(0, 300));
+          if (!impuestoISH) {
+            impuestoISH = attr.value;
+          }
+        }
+        
+        // Buscar patrones ISH
+        if (attr.value.toLowerCase().includes('ish') || 
+            attr.value.toLowerCase().includes('hospedaje') ||
+            attr.name.toLowerCase().includes('ish') ||
+            attr.name.toLowerCase().includes('hospedaje')) {
+          console.log(`¡Patrón ISH/Hospedaje encontrado en ${nodo.tagName}.${attr.name}:`, attr.value);
+          if (!impuestoISH && (attr.value.match(/\d+\.?\d*/) || attr.value.toLowerCase().includes('ish'))) {
+            impuestoISH = attr.value;
+          }
+        }
+      });
+    });
+    
+    console.log(`Total de coincidencias con "105.86": ${encontrados}`);
+
+    // 4. BÚSQUEDA DE TEXTO EN CONTENIDO DE NODOS
+    console.log('4. Buscando en contenido de texto de nodos...');
+    todosLosNodos.forEach(nodo => {
+      if (nodo.textContent && nodo.textContent.includes('105.86')) {
+        console.log(`¡Texto 105.86 encontrado en ${nodo.tagName}:`, nodo.textContent);
+        console.log(`Contexto del nodo:`, nodo.outerHTML.substring(0, 300));
+        if (!impuestoISH) {
+          impuestoISH = nodo.textContent.trim();
+        }
+      }
+    });
     
     const traslados = xmlDoc.querySelectorAll('Traslado');
     console.log('Traslados encontrados:', traslados.length);
