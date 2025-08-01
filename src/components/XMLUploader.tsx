@@ -130,6 +130,20 @@ export const XMLUploader = () => {
       }
     }
 
+    // Si no se encuentra ISH en ningún lado, buscar en TotaldeRetenciones como fallback
+    if (!impuestoISH) {
+      const impuestos = xmlDoc.querySelector('Impuestos');
+      if (impuestos) {
+        // Buscar TotaldeRetenciones con diferentes variaciones de nombre
+        impuestoISH = impuestos.getAttribute('TotaldeRetenciones') || 
+                     impuestos.getAttribute('TotalRetenciones') ||
+                     impuestos.getAttribute('TotalImpuestosRetenidos') ||
+                     impuestos.getAttribute('totaldeRetenciones') ||
+                     impuestos.getAttribute('totalRetenciones') ||
+                     impuestos.getAttribute('totalImpuestosRetenidos') || '';
+      }
+    }
+
     return {
       rfc,
       uuid,
