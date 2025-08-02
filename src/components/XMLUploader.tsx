@@ -806,13 +806,12 @@ export const XMLUploader = () => {
     const excelData = xmlData.map((data, index) => ({
       'No.': index + 1,
       'Archivo': data.fileName,
-      'RFC Emisor': data.emisorRfc || 'No encontrado',
-      'RFC Receptor': data.receptorRfc || 'No encontrado',
-      'UUID': data.uuid || 'No encontrado',
       'Fecha': data.fecha || 'No encontrado',
       'Subtotal': data.subtotal || 'No encontrado',
       'Impuesto IVA': data.impuestoIVA || 'No encontrado',
-      'Impuesto ISH': data.impuestoISH || 'No encontrado'
+      'Impuesto ISH': data.impuestoISH || 'No encontrado',
+      'RFC': data.emisorRfc || 'No encontrado',
+      'UUID': data.uuid || 'No encontrado'
     }));
 
     // Crear el libro de trabajo
@@ -824,13 +823,12 @@ export const XMLUploader = () => {
     const columnWidths = [
       { wch: 5 },   // No.
       { wch: 30 },  // Archivo
-      { wch: 15 },  // RFC Emisor
-      { wch: 15 },  // RFC Receptor
-      { wch: 40 },  // UUID
       { wch: 20 },  // Fecha
       { wch: 15 },  // Subtotal
       { wch: 15 },  // Impuesto IVA
-      { wch: 20 }   // Impuesto ISH
+      { wch: 20 },  // Impuesto ISH
+      { wch: 15 },  // RFC
+      { wch: 40 }   // UUID
     ];
     worksheet['!cols'] = columnWidths;
 
@@ -915,13 +913,12 @@ export const XMLUploader = () => {
                 <TableHeader>
                   <TableRow className="hover:bg-muted/50">
                     <TableHead className="font-semibold">Archivo</TableHead>
-                    <TableHead className="font-semibold">RFC Emisor</TableHead>
-                    <TableHead className="font-semibold">RFC Receptor</TableHead>
-                    <TableHead className="font-semibold">UUID</TableHead>
                     <TableHead className="font-semibold">Fecha</TableHead>
                     <TableHead className="font-semibold">Subtotal</TableHead>
                     <TableHead className="font-semibold">Impuesto IVA</TableHead>
                     <TableHead className="font-semibold">Impuesto ISH</TableHead>
+                    <TableHead className="font-semibold">RFC</TableHead>
+                    <TableHead className="font-semibold">UUID</TableHead>
                     <TableHead className="w-[100px] font-semibold">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -932,84 +929,6 @@ export const XMLUploader = () => {
                         <div className="flex items-center gap-2">
                           <FileText className="w-4 h-4 text-primary" />
                           <span className="text-sm">{data.fileName}</span>
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {data.emisorRfc ? (
-                            <>
-                              <CheckCircle className="w-4 h-4 text-success" />
-                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
-                                {data.emisorRfc}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={() => copyToClipboard(data.emisorRfc!)}
-                              >
-                                <Copy className="w-3 h-3" />
-                              </Button>
-                            </>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4 text-destructive" />
-                              <span className="text-sm text-muted-foreground">No encontrado</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {data.receptorRfc ? (
-                            <>
-                              <CheckCircle className="w-4 h-4 text-success" />
-                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
-                                {data.receptorRfc}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={() => copyToClipboard(data.receptorRfc!)}
-                              >
-                                <Copy className="w-3 h-3" />
-                              </Button>
-                            </>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4 text-destructive" />
-                              <span className="text-sm text-muted-foreground">No encontrado</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="flex items-center gap-2 max-w-xs">
-                          {data.uuid ? (
-                            <>
-                              <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
-                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border truncate">
-                                {data.uuid}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 flex-shrink-0"
-                                onClick={() => copyToClipboard(data.uuid!)}
-                              >
-                                <Copy className="w-3 h-3" />
-                              </Button>
-                            </>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4 text-destructive" />
-                              <span className="text-sm text-muted-foreground">No encontrado</span>
-                            </div>
-                          )}
                         </div>
                       </TableCell>
 
@@ -1116,13 +1035,65 @@ export const XMLUploader = () => {
                           )}
                         </div>
                       </TableCell>
+                      
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {data.emisorRfc ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-success" />
+                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
+                                {data.emisorRfc}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => copyToClipboard(data.emisorRfc!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-destructive" />
+                              <span className="text-sm text-muted-foreground">No encontrado</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-2 max-w-xs">
+                          {data.uuid ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
+                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border truncate">
+                                {data.uuid}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 flex-shrink-0"
+                                onClick={() => copyToClipboard(data.uuid!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-destructive" />
+                              <span className="text-sm text-muted-foreground">No encontrado</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
 
                       <TableCell>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const allData = `Archivo: ${data.fileName}\nRFC Emisor: ${data.emisorRfc || 'No encontrado'}\nRFC Receptor: ${data.receptorRfc || 'No encontrado'}\nUUID: ${data.uuid || 'No encontrado'}\nFecha: ${data.fecha || 'No encontrado'}\nSubtotal: ${data.subtotal || 'No encontrado'}\nImpuesto IVA: ${data.impuestoIVA || 'No encontrado'}\nImpuesto ISH: ${data.impuestoISH || 'No encontrado'}`;
+                            const allData = `Archivo: ${data.fileName}\nFecha: ${data.fecha || 'No encontrado'}\nSubtotal: ${data.subtotal || 'No encontrado'}\nImpuesto IVA: ${data.impuestoIVA || 'No encontrado'}\nImpuesto ISH: ${data.impuestoISH || 'No encontrado'}\nRFC: ${data.emisorRfc || 'No encontrado'}\nUUID: ${data.uuid || 'No encontrado'}`;
                             copyToClipboard(allData);
                           }}
                         >
