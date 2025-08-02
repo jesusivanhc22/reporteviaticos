@@ -921,22 +921,22 @@ export const XMLUploader = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-lg border-0" style={{ boxShadow: 'var(--shadow-elegant)' }}>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <FileText className="w-5 h-5 text-primary" />
-            Subir Archivos XML
+      <Card className="shadow-elegant border-0 bg-gradient-to-br from-card to-card/90">
+        <CardHeader className="pb-4 bg-gradient-to-r from-primary to-secondary text-white rounded-t-lg">
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <FileText className="w-6 h-6" />
+            Subir Archivos XML de Facturas
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-6">
           <div className="flex items-center justify-center w-full">
-            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/25 rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
+            <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-primary/30 rounded-lg cursor-pointer bg-gradient-to-br from-background to-muted/20 hover:border-primary/50 hover:bg-gradient-to-br hover:from-primary/5 hover:to-secondary/5 transition-all duration-300 group">
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
-                <p className="mb-2 text-sm text-muted-foreground">
-                  <span className="font-semibold">Click para subir</span> o arrastra archivos XML
+                <Upload className="w-10 h-10 mb-3 text-primary group-hover:text-secondary transition-colors duration-300" />
+                <p className="mb-2 text-sm text-foreground">
+                  <span className="font-semibold text-primary">Click para subir</span> o arrastra archivos XML
                 </p>
-                <p className="text-xs text-muted-foreground">XML (facturas electrónicas)</p>
+                <p className="text-xs text-muted-foreground">XML de facturas electrónicas</p>
               </div>
               <Input
                 type="file"
@@ -963,17 +963,18 @@ export const XMLUploader = () => {
       </Card>
 
       {xmlData.length > 0 && (
-        <Card className="shadow-lg border-0" style={{ boxShadow: 'var(--shadow-elegant)' }}>
-          <CardHeader className="pb-4">
+        <Card className="shadow-elegant border-0 bg-gradient-to-br from-card to-card/90">
+          <CardHeader className="pb-4 bg-gradient-to-r from-primary to-secondary text-white rounded-t-lg">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-foreground">
-                <CheckCircle className="w-5 h-5 text-success" />
-                Datos Extraídos
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <CheckCircle className="w-6 h-6" />
+                Datos Extraídos de Facturas
               </CardTitle>
               <Button 
                 onClick={exportToExcel}
-                className="bg-success hover:bg-success/90 text-success-foreground"
+                variant="bisoft"
                 size="sm"
+                className="bg-white text-primary hover:bg-white/90 border-white"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Exportar a Excel
