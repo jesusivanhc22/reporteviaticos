@@ -320,356 +320,124 @@ export const XMLUploader = () => {
         }
     }
 
-    // ====== ENHANCED GENERIC ISH EXTRACTION WITH HIERARCHICAL SEARCH ======
+    // ====== SIMPLIFIED ISH EXTRACTION ALGORITHM ======
+    console.log('=== EXTRACTING ISH ===');
     
-    // Enhanced ISH value validation
+    // Helper functions for validation
     const isValidISHValue = (value: string): boolean => {
+      if (!value || value.trim() === '') return false;
+      
+      // Anti-UUID filter: ISH values should never look like UUIDs
+      if (/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/i.test(value)) {
+        console.log(`❌ Rejected UUID-like value: ${value}`);
+        return false;
+      }
+      
       const numericValue = parseFloat(value);
-      return !isNaN(numericValue) && numericValue >= 10 && numericValue <= 1000;
+      
+      // Basic numeric validation
+      if (isNaN(numericValue) || numericValue <= 0) return false;
+      
+      // ISH typically ranges from 50 to 500 pesos
+      if (numericValue < 10 || numericValue > 1000) return false;
+      
+      return true;
     };
 
-    // Enhanced IVA value validation
     const isValidIVAValue = (value: string): boolean => {
       const numericValue = parseFloat(value);
       return !isNaN(numericValue) && numericValue >= 100 && numericValue <= 10000;
     };
 
-      // STEP 1: Safe IVA identification to avoid conflicts
-      console.log('=== PASO 1: Identificando valores IVA ===');
-      try {
-        const traslados = xmlDoc.querySelectorAll('Traslado');
-        traslados.forEach((traslado, index) => {
-          if (!traslado) return;
-          
-          const impuesto = safeGetAttribute(traslado, 'Impuesto');
-          const importe = safeGetAttribute(traslado, 'Importe') || safeGetAttribute(traslado, 'Valor');
-          
-          if (impuesto === '002' && importe && isValidIVAValue(importe)) {
-            impuestoIVA = importe;
-            console.log(`✅ IVA encontrado: ${importe} en Traslado ${index + 1}`);
-          }
-        });
-      } catch (error) {
-        console.warn('⚠️ Error during IVA identification:', error);
+    // Step 1: Extract IVA first to avoid conflicts
+    console.log('Step 1: Extracting IVA');
+    const traslados = xmlDoc.querySelectorAll('Traslado');
+    traslados.forEach((traslado, index) => {
+      const impuesto = safeGetAttribute(traslado, 'Impuesto');
+      const importe = safeGetAttribute(traslado, 'Importe');
+      
+      if (impuesto === '002' && importe && isValidIVAValue(importe)) {
+        impuestoIVA = importe;
+        console.log(`✅ IVA found: ${importe}`);
       }
+    });
 
-    // STEP 2: Execute hierarchical ISH search
-    console.log('=== PASO 2: Búsqueda jerárquica de ISH ===');
+    // Step 2: Look for ISH in official structures (highest priority)
+    console.log('Step 2: Looking for ISH in official structures');
     
-    const findISHValue = (): string => {
-      const candidateValues: Array<{ 
-        value: string; 
-        context: string; 
-        source: string; 
-        priority: number;
-      }> = [];
+    // 2a: Look for implocal:ImpuestosLocales structure
+    const impuestosLocales = xmlDoc.querySelector('ImpuestosLocales, implocal\\:ImpuestosLocales');
+    if (impuestosLocales) {
+      console.log('Found ImpuestosLocales structure');
       
-      const isNotIVAValue = (value: string): boolean => {
-        return value !== impuestoIVA;
-      };
-
-      const logCandidate = (value: string, source: string, context: string, priority: number) => {
-        const priorityLabel = priority >= 80 ? '🔥 ALTA' : 
-                             priority >= 40 ? '📍 MEDIA' : 
-                             priority >= 0 ? '📋 BAJA' : '❌ NEGATIVA';
-        console.log(`${priorityLabel} (${priority}): ${value} | ${source} | ${context}`);
-      };
-
-      // PHASE 1: Search for explicit ISH fiscal structures (highest priority)
-      console.log('--- FASE 1: Estructuras fiscales explícitas de ISH ---');
-      
-        // 1A: Safe search for implocal:ImpuestosLocales with error handling
-        try {
-          const impuestosLocalesSelectors = [
-            'ImpuestosLocales', 
-            'implocal\\:ImpuestosLocales', 
-            'impuestoslocales'
-          ];
-          
-          for (const selector of impuestosLocalesSelectors) {
-            try {
-              const impuestosLocales = xmlDoc.querySelectorAll(selector);
-              impuestosLocales.forEach((impLocal, index) => {
-                if (!impLocal) return;
-                
-                if (isTargetFile) {
-                  console.log(`      🔍 Analizando ImpuestosLocales[${index}] (${selector}):`);
-                  console.log(`         - Atributos: ${impLocal.attributes?.length || 0}`);
-                  if (impLocal.attributes) {
-                    for (let i = 0; i < Math.min(impLocal.attributes.length, 10); i++) {
-                      const attr = impLocal.attributes[i];
-                      if (attr) {
-                        console.log(`           ${attr.name}: ${attr.value}`);
-                      }
-                    }
-                  }
-                }
-                
-                try {
-                  const trasladosSelectors = ['ImpLocTraslado', 'implocal\\:ImpLocTraslado', 'imploctraslado'];
-                  
-                  for (const trasladoSelector of trasladosSelectors) {
-                    const traslados = impLocal.querySelectorAll(trasladoSelector);
-                    traslados.forEach((traslado, trasladoIdx) => {
-                      if (!traslado) return;
-                      
-                      const tipoTraslado = safeGetAttribute(traslado, 'ImpLocTraslado');
-                      const importe = safeGetAttribute(traslado, 'Importe');
-                      
-                      if (isTargetFile) {
-                        console.log(`         - Traslado[${trasladoIdx}]: Tipo="${tipoTraslado}", Importe="${importe}"`);
-                      }
-                      
-                      if (tipoTraslado.toUpperCase() === 'ISH' && importe && isValidISHValue(importe) && isNotIVAValue(importe)) {
-                        candidateValues.push({
-                          value: importe,
-                          context: `ImpuestosLocales[${index}].ImpLocTraslado[${trasladoIdx}][ISH]`,
-                          source: 'Estructura fiscal explícita ISH',
-                          priority: 100
-                        });
-                        logCandidate(importe, 'Estructura fiscal explícita ISH', `ImpuestosLocales[${index}]`, 100);
-                      }
-                    });
-                  }
-                } catch (error) {
-                  console.warn('⚠️ Error processing traslados:', error);
-                }
-              });
-            } catch (error) {
-              console.warn(`⚠️ Error with selector "${selector}":`, error);
-            }
-          }
-        } catch (error) {
-          console.error('❌ Error in ISH extraction phase 1A:', error);
-        }
-      
-        // 1B: Safe search for alternative ISH patterns with fallbacks
-        if (isTargetFile) {
-          console.log('      🔍 Búsqueda alternativa de patrones ISH...');
-        }
+      const ishTraslados = impuestosLocales.querySelectorAll('ImpLocTraslado, implocal\\:ImpLocTraslado');
+      for (let i = 0; i < ishTraslados.length; i++) {
+        const traslado = ishTraslados[i];
+        const tipoImpuesto = safeGetAttribute(traslado, 'ImpLocTraslado');
+        const importe = safeGetAttribute(traslado, 'Importe');
         
-        try {
-          // Safer approach: look for elements containing ISH text
-          const allElements = xmlDoc.querySelectorAll('*');
-          const ishElements: Element[] = [];
-          
-          allElements.forEach(element => {
-            if (!element || !element.attributes) return;
-            
-            try {
-              for (let i = 0; i < element.attributes.length; i++) {
-                const attr = element.attributes[i];
-                if (attr && attr.value && attr.value.toUpperCase() === 'ISH') {
-                  ishElements.push(element);
-                  break;
-                }
-              }
-            } catch (error) {
-              console.warn('⚠️ Error checking element attributes:', error);
-            }
-          });
-          
-          ishElements.forEach((element, index) => {
-            if (isTargetFile) {
-              console.log(`      📋 Elemento con ISH encontrado[${index}]: ${element.tagName}`);
-            }
-            
-            try {
-              if (element.attributes) {
-                for (let i = 0; i < element.attributes.length; i++) {
-                  const attr = element.attributes[i];
-                  if (attr && attr.value && attr.value.toUpperCase() === 'ISH') {
-                    // Look for Importe in same element or siblings
-                    const importe = safeGetAttribute(element, 'Importe') || 
-                                   safeGetAttribute(element, 'importe') ||
-                                   safeGetAttribute(element, 'Valor') ||
-                                   safeGetAttribute(element, 'valor');
-                    
-                    if (importe && isValidISHValue(importe) && isNotIVAValue(importe)) {
-                      candidateValues.push({
-                        value: importe,
-                        context: `${element.tagName}[${attr.name}=ISH].Importe`,
-                        source: 'Patrón ISH alternativo',
-                        priority: 95
-                      });
-                      logCandidate(importe, 'Patrón ISH alternativo', `${element.tagName}[${attr.name}=ISH]`, 95);
-                    }
-                  }
-                }
-              }
-            } catch (error) {
-              console.warn('⚠️ Error processing ISH element:', error);
-            }
-          });
-        } catch (error) {
-          console.error('❌ Error in alternative ISH pattern search:', error);
-        }
-
-        // PHASE 2: Safe search by tax code 003 (ISH identifier)
-        if (candidateValues.filter(c => c.priority >= 90).length === 0) {
-          console.log('--- FASE 2: Código de impuesto 003 ---');
-          
-          try {
-            const traslados = xmlDoc.querySelectorAll('Traslado');
-            traslados.forEach((traslado, index) => {
-              if (!traslado) return;
-              
-              const impuesto = safeGetAttribute(traslado, 'Impuesto');
-              const importe = safeGetAttribute(traslado, 'Importe') || safeGetAttribute(traslado, 'Valor');
-              
-              if (impuesto === '003' && importe && isValidISHValue(importe) && isNotIVAValue(importe)) {
-                candidateValues.push({
-                  value: importe,
-                  context: `Traslado[${index}].Impuesto=003`,
-                  source: 'Código de impuesto 003',
-                  priority: 90
-                });
-                logCandidate(importe, 'Código de impuesto 003', `Traslado[${index}]`, 90);
-              }
-            });
-          } catch (error) {
-            console.error('❌ Error in tax code 003 search:', error);
-          }
-        }
-
-        // PHASE 3: Safe semantic context search with performance limits
-        if (candidateValues.filter(c => c.priority >= 70).length === 0) {
-          console.log('--- FASE 3: Contexto semántico ---');
-          
-          try {
-            const allElements = xmlDoc.querySelectorAll('*');
-            const maxElementsForSemantic = 3000; // Performance limit
-            
-            const elementsToProcess = allElements.length > maxElementsForSemantic 
-              ? Array.from(allElements).slice(0, maxElementsForSemantic)
-              : Array.from(allElements);
-            
-            if (allElements.length > maxElementsForSemantic) {
-              console.log(`⚠️ Limitando análisis semántico a ${maxElementsForSemantic} elementos`);
-            }
-            
-            elementsToProcess.forEach((element) => {
-              if (!element) return;
-              
-              try {
-                const elementText = element.outerHTML?.toLowerCase() || '';
-                let priority = 0;
-                
-                // Calculate semantic priority with safe text checking
-                if (elementText.includes('impuestoslocales') || elementText.includes('implocal:')) priority += 80;
-                if (elementText.includes('hospedaje')) priority += 70;
-                if (elementText.includes('ish')) priority += 60;
-                if (elementText.includes('turismo') || elementText.includes('tourism')) priority += 50;
-                if (elementText.includes('hotel') || elementText.includes('alojamiento')) priority += 40;
-                
-                // Negative priority for IVA indicators
-                if (elementText.includes('impuesto="002"') || elementText.includes("impuesto='002'")) priority -= 100;
-                if (elementText.includes('iva') || elementText.includes('valor agregado')) priority -= 50;
-                
-                if (priority > 0 && element.attributes) {
-                  for (let i = 0; i < element.attributes.length; i++) {
-                    const attr = element.attributes[i];
-                    if (attr && attr.value && isValidISHValue(attr.value) && isNotIVAValue(attr.value)) {
-                      candidateValues.push({
-                        value: attr.value,
-                        context: `${element.tagName}.${attr.name}`,
-                        source: 'Contexto semántico',
-                        priority: priority
-                      });
-                      logCandidate(attr.value, 'Contexto semántico', `${element.tagName}.${attr.name}`, priority);
-                    }
-                  }
-                }
-              } catch (error) {
-                console.warn('⚠️ Error in semantic analysis for element:', error);
-              }
-            });
-          } catch (error) {
-            console.error('❌ Error in semantic context search:', error);
-          }
-        }
-
-        // PHASE 4: Safe range-based fallback with limits
-        if (candidateValues.filter(c => c.priority >= 20).length === 0) {
-          console.log('--- FASE 4: Búsqueda de respaldo ---');
-          
-          try {
-            const allElements = xmlDoc.querySelectorAll('*');
-            const maxElementsForFallback = 2000; // Performance limit
-            
-            const elementsToProcess = allElements.length > maxElementsForFallback 
-              ? Array.from(allElements).slice(0, maxElementsForFallback)
-              : Array.from(allElements);
-            
-            if (allElements.length > maxElementsForFallback) {
-              console.log(`⚠️ Limitando búsqueda de respaldo a ${maxElementsForFallback} elementos`);
-            }
-            
-            elementsToProcess.forEach((element) => {
-              if (!element || !element.attributes) return;
-              
-              try {
-                for (let i = 0; i < element.attributes.length; i++) {
-                  const attr = element.attributes[i];
-                  if (attr && attr.value && isValidISHValue(attr.value) && isNotIVAValue(attr.value)) {
-                    const numericValue = parseFloat(attr.value);
-                    const rangeScore = numericValue >= 50 && numericValue <= 400 ? 20 : 10;
-                    
-                    candidateValues.push({
-                      value: attr.value,
-                      context: `${element.tagName}.${attr.name}`,
-                      source: 'Búsqueda de respaldo',
-                      priority: rangeScore
-                    });
-                    logCandidate(attr.value, 'Búsqueda de respaldo', `${element.tagName}.${attr.name}`, rangeScore);
-                  }
-                }
-              } catch (error) {
-                console.warn('⚠️ Error in fallback search for element:', error);
-              }
-            });
-          } catch (error) {
-            console.error('❌ Error in range-based fallback search:', error);
-          }
-        }
-
-        // Select best candidate with safe sorting
-        if (candidateValues.length > 0) {
-          try {
-            candidateValues.sort((a, b) => {
-              if (a.priority !== b.priority) return b.priority - a.priority;
-              
-              // If same priority, prefer values closer to typical ISH range
-              const aValue = parseFloat(a.value);
-              const bValue = parseFloat(b.value);
-              const aDist = Math.abs(aValue - 200);
-              const bDist = Math.abs(bValue - 200);
-              return aDist - bDist;
-            });
-            
-            const bestCandidate = candidateValues[0];
-            console.log(`✅ ISH SELECCIONADO: ${bestCandidate.value} (prioridad: ${bestCandidate.priority})`);
-            console.log(`   Fuente: ${bestCandidate.source}`);
-            console.log(`   Contexto: ${bestCandidate.context}`);
-            
-            return bestCandidate.value;
-          } catch (error) {
-            console.error('❌ Error selecting best ISH candidate:', error);
-            return candidateValues[0]?.value || '';
-          }
-        }
+        console.log(`Checking ImpLocTraslado: ${tipoImpuesto} = ${importe}`);
         
-        console.log('❌ No se encontró valor ISH válido');
-        return '';
-      };
-
-      // Execute ISH search with error handling
-      try {
-        impuestoISH = findISHValue();
-      } catch (error) {
-        console.error('❌ Error during ISH search:', error);
-        impuestoISH = '';
+        if (tipoImpuesto && tipoImpuesto.toUpperCase() === 'ISH' && importe && isValidISHValue(importe)) {
+          if (importe !== impuestoIVA) { // Avoid IVA conflicts
+            impuestoISH = importe;
+            console.log(`✅ ISH found in official structure: ${importe}`);
+            break;
+          }
+        }
       }
+    }
+
+    // 2b: Look for tax code 003 (ISH identifier) if not found yet
+    if (!impuestoISH) {
+      console.log('Step 2b: Looking for tax code 003');
+      
+      traslados.forEach((traslado, index) => {
+        const impuesto = safeGetAttribute(traslado, 'Impuesto');
+        const importe = safeGetAttribute(traslado, 'Importe');
+        
+        if (impuesto === '003' && importe && isValidISHValue(importe)) {
+          if (importe !== impuestoIVA) { // Avoid IVA conflicts
+            impuestoISH = importe;
+            console.log(`✅ ISH found via tax code 003: ${importe}`);
+          }
+        }
+      });
+    }
+
+    // Step 3: Look for elements with ISH attributes
+    if (!impuestoISH) {
+      console.log('Step 3: Looking for ISH attributes');
+      
+      const allElements = xmlDoc.querySelectorAll('*');
+      for (let i = 0; i < allElements.length; i++) {
+        const element = allElements[i];
+        if (!element.attributes) continue;
+        
+        for (let j = 0; j < element.attributes.length; j++) {
+          const attr = element.attributes[j];
+          if (attr.value && attr.value.toUpperCase() === 'ISH') {
+            // Found ISH reference, look for Importe in same element
+            const importe = safeGetAttribute(element, 'Importe') || safeGetAttribute(element, 'Valor');
+            
+            if (importe && isValidISHValue(importe) && importe !== impuestoIVA) {
+              impuestoISH = importe;
+              console.log(`✅ ISH found via ISH attribute: ${importe}`);
+              break;
+            }
+          }
+        }
+        if (impuestoISH) break;
+      }
+    }
+
+    // Final validation: Ensure ISH is different from IVA
+    if (impuestoISH && impuestoISH === impuestoIVA) {
+      console.log('⚠️ ISH equals IVA, clearing ISH to avoid conflict');
+      impuestoISH = '';
+    }
+
+    console.log(`Final results - IVA: ${impuestoIVA || 'NOT FOUND'}, ISH: ${impuestoISH || 'NOT FOUND'}`);
 
     // ====== ENHANCED VALIDATION AND CONFLICT RESOLUTION ======
     if (isTargetFile) {
