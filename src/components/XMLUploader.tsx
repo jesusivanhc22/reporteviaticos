@@ -37,23 +37,24 @@ export const XMLUploader = () => {
         throw new Error(`XML parsing failed: ${parserError.textContent}`);
       }
       
-      // ====== ENHANCED DEBUGGING FOR FILE 101183718 ======
-      const isTargetFile = fileName.includes('101183718');
+      // Enhanced debugging for problematic files
+      const debugMode = fileName.includes('101183718') || fileName.includes('101525703') || 
+                       fileName.includes('101525603') || fileName.includes('101183341') ||
+                       fileName.includes('F01-46019');
       
-      if (isTargetFile) {
-        console.log('🎯 ===== ANÁLISIS DETALLADO PARA ARCHIVO 101183718 =====');
-        console.log('📄 Archivo objetivo detectado, iniciando análisis exhaustivo...');
+      if (debugMode) {
+        console.log(`🎯 ===== ANÁLISIS DETALLADO PARA ARCHIVO ${fileName} =====`);
       }
     
-    // Buscar RFC y UUID en diferentes posibles ubicaciones del XML
-    let rfc = '';
-    let uuid = '';
-    let emisorRfc = '';
-    let receptorRfc = '';
-    let fecha = '';
-    let subtotal = '';
-    let impuestoIVA = '';
-    let impuestoISH = '';
+      // Initialize variables
+      let rfc = '';
+      let uuid = '';
+      let emisorRfc = '';
+      let receptorRfc = '';
+      let fecha = '';
+      let subtotal = '';
+      let impuestoIVA = '';
+      let impuestoISH = '';
 
       // Safe element extraction with error handling
       const safeGetElement = (selector: string): Element | null => {
@@ -74,14 +75,40 @@ export const XMLUploader = () => {
         }
       };
 
+      const safeGetElements = (selector: string): Element[] => {
+        try {
+          return Array.from(xmlDoc.querySelectorAll(selector));
+        } catch (error) {
+          console.warn(`⚠️ Invalid selector "${selector}":`, error);
+          return [];
+        }
+      };
+
+      // Enhanced namespace-aware selectors
+      const tryMultipleSelectors = (selectors: string[]): Element | null => {
+        for (const selector of selectors) {
+          const element = safeGetElement(selector);
+          if (element) return element;
+        }
+        return null;
+      };
+
       // Buscar UUID (TimbreFiscalDigital o atributo UUID)
-      const timbreFiscal = safeGetElement('TimbreFiscalDigital');
+      const timbreFiscal = tryMultipleSelectors([
+        'TimbreFiscalDigital',
+        'tfd\\:TimbreFiscalDigital',
+        '[*|TimbreFiscalDigital]'
+      ]);
       if (timbreFiscal) {
         uuid = safeGetAttribute(timbreFiscal, 'UUID');
       }
       
       // También buscar en el nodo raíz
-      const comprobante = safeGetElement('Comprobante');
+      const comprobante = tryMultipleSelectors([
+        'Comprobante',
+        'cfdi\\:Comprobante',
+        '[*|Comprobante]'
+      ]);
       if (comprobante) {
         if (!uuid) {
           uuid = safeGetAttribute(comprobante, 'UUID');
@@ -92,20 +119,28 @@ export const XMLUploader = () => {
       }
 
       // Buscar RFC del emisor
-      const emisor = safeGetElement('Emisor');
+      const emisor = tryMultipleSelectors([
+        'Emisor',
+        'cfdi\\:Emisor',
+        '[*|Emisor]'
+      ]);
       if (emisor) {
         emisorRfc = safeGetAttribute(emisor, 'Rfc') || safeGetAttribute(emisor, 'rfc');
         rfc = emisorRfc; // Por defecto, usar el RFC del emisor
       }
 
       // Buscar RFC del receptor
-      const receptor = safeGetElement('Receptor');
+      const receptor = tryMultipleSelectors([
+        'Receptor',
+        'cfdi\\:Receptor',
+        '[*|Receptor]'
+      ]);
       if (receptor) {
         receptorRfc = safeGetAttribute(receptor, 'Rfc') || safeGetAttribute(receptor, 'rfc');
       }
 
-    // ====== DETAILED XML STRUCTURE ANALYSIS FOR TARGET FILE ======
-    if (isTargetFile) {
+    // ====== DETAILED XML STRUCTURE ANALYSIS FOR PROBLEMATIC FILES ======
+    if (debugMode) {
       console.log('🔍 ===== ANÁLISIS COMPLETO DE ESTRUCTURA XML =====');
       
         // Safe XML namespace analysis with error handling
@@ -320,16 +355,16 @@ export const XMLUploader = () => {
         }
     }
 
-    // ====== SIMPLIFIED ISH EXTRACTION ALGORITHM ======
-    console.log('=== EXTRACTING ISH ===');
+    // ====== ENHANCED IVA AND ISH EXTRACTION ALGORITHM ======
+    console.log('=== ENHANCED TAX EXTRACTION ===');
     
-    // Helper functions for validation
+    // Enhanced validation functions with better error handling
     const isValidISHValue = (value: string): boolean => {
       if (!value || value.trim() === '') return false;
       
       // Anti-UUID filter: ISH values should never look like UUIDs
       if (/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/i.test(value)) {
-        console.log(`❌ Rejected UUID-like value: ${value}`);
+        if (debugMode) console.log(`❌ Rejected UUID-like value: ${value}`);
         return false;
       }
       
@@ -338,109 +373,177 @@ export const XMLUploader = () => {
       // Basic numeric validation
       if (isNaN(numericValue) || numericValue <= 0) return false;
       
-      // ISH typically ranges from 50 to 500 pesos
-      if (numericValue < 10 || numericValue > 1000) return false;
+      // Relaxed ISH validation - broader range to catch more cases
+      if (numericValue < 5 || numericValue > 5000) return false;
       
       return true;
     };
 
+    // Enhanced IVA validation with broader range
     const isValidIVAValue = (value: string): boolean => {
+      if (!value || value.trim() === '') return false;
       const numericValue = parseFloat(value);
-      return !isNaN(numericValue) && numericValue >= 100 && numericValue <= 10000;
+      // Relaxed range to catch more IVA cases (from $10 to $50,000)
+      return !isNaN(numericValue) && numericValue >= 10 && numericValue <= 50000;
     };
 
-    // Step 1: Extract IVA first to avoid conflicts
-    console.log('Step 1: Extracting IVA');
-    const traslados = xmlDoc.querySelectorAll('Traslado');
-    traslados.forEach((traslado, index) => {
-      const impuesto = safeGetAttribute(traslado, 'Impuesto');
-      const importe = safeGetAttribute(traslado, 'Importe');
+    // Enhanced tax extraction with multiple strategies
+    const extractTaxValue = (taxType: 'IVA' | 'ISH'): string => {
+      const isIVA = taxType === 'IVA';
+      const validationFn = isIVA ? isValidIVAValue : isValidISHValue;
+      const taxCode = isIVA ? '002' : '003';
       
-      if (impuesto === '002' && importe && isValidIVAValue(importe)) {
-        impuestoIVA = importe;
-        console.log(`✅ IVA found: ${importe}`);
+      if (debugMode) {
+        console.log(`🔍 Extracting ${taxType} with enhanced strategies...`);
       }
-    });
 
-    // Step 2: Look for ISH in official structures (highest priority)
-    console.log('Step 2: Looking for ISH in official structures');
-    
-    // 2a: Look for implocal:ImpuestosLocales structure
-    const impuestosLocales = xmlDoc.querySelector('ImpuestosLocales, implocal\\:ImpuestosLocales');
-    if (impuestosLocales) {
-      console.log('Found ImpuestosLocales structure');
-      
-      const ishTraslados = impuestosLocales.querySelectorAll('ImpLocTraslado, implocal\\:ImpLocTraslado');
-      for (let i = 0; i < ishTraslados.length; i++) {
-        const traslado = ishTraslados[i];
-        const tipoImpuesto = safeGetAttribute(traslado, 'ImpLocTraslado');
-        const importe = safeGetAttribute(traslado, 'Importe');
-        
-        console.log(`Checking ImpLocTraslado: ${tipoImpuesto} = ${importe}`);
-        
-        if (tipoImpuesto && tipoImpuesto.toUpperCase() === 'ISH' && importe && isValidISHValue(importe)) {
-          if (importe !== impuestoIVA) { // Avoid IVA conflicts
-            impuestoISH = importe;
-            console.log(`✅ ISH found in official structure: ${importe}`);
-            break;
+      // Strategy 1: Look for standard tax codes in Traslado elements
+      const trasladosSelectors = [
+        'Traslado',
+        'cfdi\\:Traslado',
+        '[*|Traslado]',
+        'Impuestos Traslado',
+        'Impuestos > Traslados > Traslado'
+      ];
+
+      for (const selector of trasladosSelectors) {
+        const traslados = safeGetElements(selector);
+        for (const traslado of traslados) {
+          const impuesto = safeGetAttribute(traslado, 'Impuesto');
+          const importe = safeGetAttribute(traslado, 'Importe');
+          
+          if (impuesto === taxCode && importe && validationFn(importe)) {
+            if (debugMode) console.log(`✅ ${taxType} found via tax code ${taxCode}: ${importe}`);
+            return importe;
           }
         }
       }
-    }
 
-    // 2b: Look for tax code 003 (ISH identifier) if not found yet
-    if (!impuestoISH) {
-      console.log('Step 2b: Looking for tax code 003');
-      
-      traslados.forEach((traslado, index) => {
-        const impuesto = safeGetAttribute(traslado, 'Impuesto');
-        const importe = safeGetAttribute(traslado, 'Importe');
-        
-        if (impuesto === '003' && importe && isValidISHValue(importe)) {
-          if (importe !== impuestoIVA) { // Avoid IVA conflicts
-            impuestoISH = importe;
-            console.log(`✅ ISH found via tax code 003: ${importe}`);
-          }
-        }
-      });
-    }
+      // Strategy 2: For ISH, look in local tax structures
+      if (!isIVA) {
+        const localTaxSelectors = [
+          'ImpuestosLocales',
+          'implocal\\:ImpuestosLocales',
+          '[*|ImpuestosLocales]',
+          'Locales'
+        ];
 
-    // Step 3: Look for elements with ISH attributes
-    if (!impuestoISH) {
-      console.log('Step 3: Looking for ISH attributes');
-      
-      const allElements = xmlDoc.querySelectorAll('*');
-      for (let i = 0; i < allElements.length; i++) {
-        const element = allElements[i];
-        if (!element.attributes) continue;
-        
-        for (let j = 0; j < element.attributes.length; j++) {
-          const attr = element.attributes[j];
-          if (attr.value && attr.value.toUpperCase() === 'ISH') {
-            // Found ISH reference, look for Importe in same element
-            const importe = safeGetAttribute(element, 'Importe') || safeGetAttribute(element, 'Valor');
-            
-            if (importe && isValidISHValue(importe) && importe !== impuestoIVA) {
-              impuestoISH = importe;
-              console.log(`✅ ISH found via ISH attribute: ${importe}`);
-              break;
+        for (const selector of localTaxSelectors) {
+          const localTaxElements = safeGetElements(selector);
+          for (const localTax of localTaxElements) {
+            // Look for various ISH indicators
+            const ishSelectors = [
+              'ImpLocTraslado',
+              'implocal\\:ImpLocTraslado',
+              '[*|ImpLocTraslado]'
+            ];
+
+            for (const ishSelector of ishSelectors) {
+              const ishElements = localTax.querySelectorAll(ishSelector);
+              for (const ishElement of ishElements) {
+                const tipoImpuesto = safeGetAttribute(ishElement, 'ImpLocTraslado') ||
+                                   safeGetAttribute(ishElement, 'TipoDeImpuesto') ||
+                                   safeGetAttribute(ishElement, 'Tipo');
+                const importe = safeGetAttribute(ishElement, 'Importe') ||
+                               safeGetAttribute(ishElement, 'Valor');
+                
+                if (tipoImpuesto && tipoImpuesto.toUpperCase().includes('ISH') && 
+                    importe && validationFn(importe)) {
+                  if (debugMode) console.log(`✅ ISH found in local structure: ${importe}`);
+                  return importe;
+                }
+              }
             }
           }
         }
-        if (impuestoISH) break;
       }
+
+      // Strategy 3: Search by attribute values containing tax identifiers
+      const allElements = xmlDoc.querySelectorAll('*');
+      for (const element of allElements) {
+        if (!element.attributes) continue;
+        
+        for (let i = 0; i < element.attributes.length; i++) {
+          const attr = element.attributes[i];
+          if (!attr) continue;
+          
+          const attrValue = attr.value.toUpperCase();
+          let isTargetTax = false;
+          
+          if (isIVA) {
+            isTargetTax = attrValue === 'IVA' || attrValue === '002' || 
+                         attrValue.includes('VALOR AGREGADO') ||
+                         (attr.name.toUpperCase().includes('IVA') && attrValue !== '');
+          } else {
+            isTargetTax = attrValue === 'ISH' || attrValue === '003' ||
+                         attrValue.includes('HOSPEDAJE') ||
+                         (attr.name.toUpperCase().includes('ISH') && attrValue !== '');
+          }
+          
+          if (isTargetTax) {
+            // Look for Importe/Valor in same element or nearby
+            const candidates = [
+              safeGetAttribute(element, 'Importe'),
+              safeGetAttribute(element, 'Valor'),
+              safeGetAttribute(element, 'Monto'),
+              safeGetAttribute(element, 'Total')
+            ];
+            
+            for (const candidate of candidates) {
+              if (candidate && validationFn(candidate)) {
+                if (debugMode) console.log(`✅ ${taxType} found via attribute search: ${candidate}`);
+                return candidate;
+              }
+            }
+          }
+        }
+      }
+
+      // Strategy 4: For IVA, look for percentage-based calculations
+      if (isIVA && subtotal) {
+        const subtotalNum = parseFloat(subtotal);
+        if (subtotalNum > 0) {
+          // Standard IVA is 16% in Mexico
+          const expectedIVA = subtotalNum * 0.16;
+          const tolerance = expectedIVA * 0.1; // 10% tolerance
+          
+          for (const element of allElements) {
+            if (!element.attributes) continue;
+            
+            for (let i = 0; i < element.attributes.length; i++) {
+              const attr = element.attributes[i];
+              if (!attr) continue;
+              
+              const value = parseFloat(attr.value);
+              if (!isNaN(value) && Math.abs(value - expectedIVA) <= tolerance) {
+                if (validationFn(attr.value)) {
+                  if (debugMode) console.log(`✅ IVA found via percentage calculation: ${attr.value}`);
+                  return attr.value;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      return '';
+    };
+
+    // Extract IVA first
+    impuestoIVA = extractTaxValue('IVA');
+    
+    // Extract ISH, ensuring it's different from IVA
+    let candidateISH = extractTaxValue('ISH');
+    if (candidateISH && candidateISH !== impuestoIVA) {
+      impuestoISH = candidateISH;
     }
 
-    // Final validation: Ensure ISH is different from IVA
-    if (impuestoISH && impuestoISH === impuestoIVA) {
-      console.log('⚠️ ISH equals IVA, clearing ISH to avoid conflict');
-      impuestoISH = '';
+    if (debugMode) {
+      console.log(`Initial extraction results - IVA: ${impuestoIVA || 'NOT FOUND'}, ISH: ${impuestoISH || 'NOT FOUND'}`);
     }
-
-    console.log(`Final results - IVA: ${impuestoIVA || 'NOT FOUND'}, ISH: ${impuestoISH || 'NOT FOUND'}`);
 
     // ====== ENHANCED VALIDATION AND CONFLICT RESOLUTION ======
-    if (isTargetFile) {
+    if (debugMode) {
       console.log('🔧 ===== VALIDACIÓN Y RESOLUCIÓN DE CONFLICTOS =====');
     }
     
@@ -449,7 +552,7 @@ export const XMLUploader = () => {
       console.log('⚠️ CONFLICTO DETECTADO: ISH = IVA');
       console.log(`   Valor conflictivo: ${impuestoISH}`);
       
-      if (isTargetFile) {
+      if (debugMode) {
         console.log('   🔍 Buscando valor ISH alternativo...');
         
         // Try to find a different ISH value in the candidate list
@@ -504,9 +607,9 @@ export const XMLUploader = () => {
       }
     }
     
-    // Additional validation for target file
-    if (isTargetFile) {
-      console.log('🎯 ===== VALIDACIÓN ESPECÍFICA PARA ARCHIVO 101183718 =====');
+    // Additional validation for problematic files
+    if (debugMode) {
+      console.log('🎯 ===== VALIDACIÓN ESPECÍFICA PARA ARCHIVOS PROBLEMÁTICOS =====');
       
       // Check if we have reasonable values
       const subtotalNum = parseFloat(subtotal || '0');
