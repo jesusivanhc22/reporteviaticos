@@ -126,7 +126,7 @@ export const XMLUploader = () => {
         total = safeGetAttribute(comprobante, 'Total') || safeGetAttribute(comprobante, 'total');
       }
 
-      // Buscar RFC del emisor
+      // Buscar RFC y nombre del emisor
       const emisor = tryMultipleSelectors([
         'Emisor',
         'cfdi\\:Emisor',
@@ -134,10 +134,11 @@ export const XMLUploader = () => {
       ]);
       if (emisor) {
         emisorRfc = safeGetAttribute(emisor, 'Rfc') || safeGetAttribute(emisor, 'rfc');
+        nombre = safeGetAttribute(emisor, 'Nombre') || safeGetAttribute(emisor, 'nombre');
         rfc = emisorRfc; // Por defecto, usar el RFC del emisor
       }
 
-      // Buscar RFC del receptor y nombre
+      // Buscar RFC del receptor
       const receptor = tryMultipleSelectors([
         'Receptor',
         'cfdi\\:Receptor',
@@ -145,7 +146,6 @@ export const XMLUploader = () => {
       ]);
       if (receptor) {
         receptorRfc = safeGetAttribute(receptor, 'Rfc') || safeGetAttribute(receptor, 'rfc');
-        nombre = safeGetAttribute(receptor, 'Nombre') || safeGetAttribute(receptor, 'nombre');
       }
 
     // ====== DETAILED XML STRUCTURE ANALYSIS FOR PROBLEMATIC FILES ======
@@ -683,62 +683,72 @@ export const XMLUploader = () => {
       console.log(`   🏨 ISH: ${impuestoISH || 'NO ENCONTRADO'}`);
     }
     
-    // ====== EXTRACTION OF PROPINA (TIP) ======
-    console.log('=== EXTRACTING PROPINA ===');
+    // ====== EXTRACTION OF PROPINA (TIP) FROM ADDENDA ======
+    console.log('=== EXTRACTING PROPINA FROM ADDENDA ===');
     
-    // Strategy 1: Look for "propina" in element names or attributes
-    const allElements = xmlDoc.querySelectorAll('*');
-    for (const element of allElements) {
-      if (!element.attributes) continue;
-      
-      // Check element name for propina indicators
-      const elementName = element.tagName.toLowerCase();
-      if (elementName.includes('propina') || elementName.includes('tip') || elementName.includes('servicio')) {
-        const amount = safeGetAttribute(element, 'Importe') || 
-                     safeGetAttribute(element, 'Valor') ||
-                     safeGetAttribute(element, 'Monto') ||
-                     safeGetAttribute(element, 'Total');
+    // Strategy 1: Look specifically in Addenda for propina attribute
+    const addendaSelectors = [
+      'Addenda',
+      'cfdi\\:Addenda',
+      '[*|Addenda]'
+    ];
+    
+    for (const selector of addendaSelectors) {
+      const addendaElements = safeGetElements(selector);
+      for (const addenda of addendaElements) {
+        // Look for all elements within addenda
+        const allAddendaElements = addenda.querySelectorAll('*');
         
-        if (amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0) {
-          propina = amount;
-          console.log(`✅ Propina found via element name: ${propina}`);
-          break;
-        }
-      }
-      
-      // Check attributes for propina indicators
-      for (let i = 0; i < element.attributes.length; i++) {
-        const attr = element.attributes[i];
-        if (!attr) continue;
-        
-        const attrName = attr.name.toLowerCase();
-        const attrValue = attr.value.toLowerCase();
-        
-        if (attrName.includes('propina') || attrName.includes('tip') || 
-            attrValue.includes('propina') || attrValue.includes('tip') ||
-            attrValue.includes('servicio')) {
+        for (const element of allAddendaElements) {
+          // Check for propina attribute directly
+          const propinaValue = safeGetAttribute(element, 'propina');
+          if (propinaValue && !isNaN(parseFloat(propinaValue)) && parseFloat(propinaValue) > 0) {
+            propina = propinaValue;
+            console.log(`✅ Propina found in addenda: ${propina} from element ${element.tagName}`);
+            break;
+          }
           
-          // Look for associated amount
-          const candidates = [
-            safeGetAttribute(element, 'Importe'),
-            safeGetAttribute(element, 'Valor'),
-            safeGetAttribute(element, 'Monto'),
-            safeGetAttribute(element, 'Total')
-          ];
-          
-          for (const candidate of candidates) {
-            if (candidate && !isNaN(parseFloat(candidate)) && parseFloat(candidate) > 0) {
-              propina = candidate;
-              console.log(`✅ Propina found via attribute: ${propina}`);
+          // Also check for alternative attribute names
+          const alternativeNames = ['tip', 'servicio', 'gratuidad'];
+          for (const altName of alternativeNames) {
+            const altValue = safeGetAttribute(element, altName);
+            if (altValue && !isNaN(parseFloat(altValue)) && parseFloat(altValue) > 0) {
+              propina = altValue;
+              console.log(`✅ Propina found in addenda via ${altName}: ${propina}`);
               break;
             }
           }
           
           if (propina) break;
         }
+        
+        if (propina) break;
       }
       
       if (propina) break;
+    }
+    
+    // Strategy 2: If not found in addenda, look for specific Innssist element with propina attribute
+    if (!propina) {
+      const innssistSelectors = [
+        'Innssist',
+        'innssist\\:Innssist',
+        '[*|Innssist]'
+      ];
+      
+      for (const selector of innssistSelectors) {
+        const innssistElements = safeGetElements(selector);
+        for (const element of innssistElements) {
+          const propinaValue = safeGetAttribute(element, 'propina');
+          if (propinaValue && !isNaN(parseFloat(propinaValue)) && parseFloat(propinaValue) > 0) {
+            propina = propinaValue;
+            console.log(`✅ Propina found in Innssist element: ${propina}`);
+            break;
+          }
+        }
+        
+        if (propina) break;
+      }
     }
     
     console.log('=== RESULTADO FINAL ===');
