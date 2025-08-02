@@ -27,6 +27,15 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+      {/* Header with Logo */}
+      <div className="w-full py-4 px-6">
+        <img 
+          src="/lovable-uploads/fff2652c-930a-4f0e-9de2-2005fe936c6f.png" 
+          alt="Bisoft Logo" 
+          className="h-12 w-auto"
+        />
+      </div>
+      
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
@@ -72,21 +81,6 @@ const Home = () => {
             })}
           </div>
 
-          {/* Additional Info */}
-          <div className="mt-16 text-center">
-            <Card className="shadow-elegant border-0 bg-gradient-to-r from-primary/5 to-secondary/5 max-w-2xl mx-auto">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <FileText className="w-6 h-6 text-primary" />
-                  <h3 className="text-lg font-semibold text-primary">Sistema Integrado</h3>
-                </div>
-                <p className="text-muted-foreground">
-                  Plataforma completa para la gestión de viáticos empresariales con 
-                  procesamiento automático de facturas XML y generación de reportes detallados.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
     </div>
