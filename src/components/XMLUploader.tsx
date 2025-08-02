@@ -683,143 +683,10 @@ export const XMLUploader = () => {
       console.log(`   🏨 ISH: ${impuestoISH || 'NO ENCONTRADO'}`);
     }
     
-    // ====== EXTRACTION OF PROPINA (TIP) FROM ADDENDA ======
-    console.log('=== EXTRACTING PROPINA FROM ADDENDA ===');
-    
-    if (debugMode) {
-      console.log('🎯 BÚSQUEDA DETALLADA DE PROPINA EN ADDENDA');
-    }
-    
-    // Strategy 1: Look specifically in Addenda for propina attribute
-    const addendaSelectors = [
-      'Addenda',
-      'cfdi\\:Addenda',
-      '[*|Addenda]'
-    ];
-    
-    console.log(`🔍 Buscando addenda con selectores: ${addendaSelectors.join(', ')}`);
-    
-    for (const selector of addendaSelectors) {
-      const addendaElements = safeGetElements(selector);
-      console.log(`   - Selector "${selector}": ${addendaElements.length} elemento(s) encontrado(s)`);
-      
-      for (const addenda of addendaElements) {
-        console.log(`   📦 Analizando addenda element: ${addenda.tagName}`);
-        
-        // Look for all elements within addenda
-        const allAddendaElements = addenda.querySelectorAll('*');
-        console.log(`      - Elementos hijos en addenda: ${allAddendaElements.length}`);
-        
-        // List all child elements for debugging
-        if (debugMode) {
-          console.log('      📋 Inventario de elementos en addenda:');
-          allAddendaElements.forEach((el, idx) => {
-            if (el.tagName) {
-              console.log(`         [${idx}] ${el.tagName} (${el.attributes ? el.attributes.length : 0} atributos)`);
-              if (el.attributes) {
-                for (let i = 0; i < el.attributes.length; i++) {
-                  const attr = el.attributes[i];
-                  console.log(`            - ${attr.name}: ${attr.value}`);
-                }
-              }
-            }
-          });
-        }
-        
-        for (const element of allAddendaElements) {
-          const elementTag = element.tagName;
-          console.log(`      🔍 Examinando elemento: ${elementTag}`);
-          
-          // Check for propina attribute directly
-          const propinaValue = safeGetAttribute(element, 'propina');
-          console.log(`         - Atributo 'propina': ${propinaValue || 'NO ENCONTRADO'}`);
-          
-          if (propinaValue && !isNaN(parseFloat(propinaValue)) && parseFloat(propinaValue) > 0) {
-            propina = propinaValue;
-            console.log(`✅ PROPINA ENCONTRADA en addenda: ${propina} from element ${element.tagName}`);
-            break;
-          }
-          
-          // Also check for alternative attribute names
-          const alternativeNames = ['tip', 'servicio', 'gratuidad', 'tips'];
-          for (const altName of alternativeNames) {
-            const altValue = safeGetAttribute(element, altName);
-            if (altValue) {
-              console.log(`         - Atributo '${altName}': ${altValue}`);
-              if (!isNaN(parseFloat(altValue)) && parseFloat(altValue) > 0) {
-                propina = altValue;
-                console.log(`✅ PROPINA ENCONTRADA en addenda via ${altName}: ${propina}`);
-                break;
-              }
-            }
-          }
-          
-          if (propina) break;
-        }
-        
-        if (propina) break;
-      }
-      
-      if (propina) break;
-    }
-    
-    // Strategy 2: If not found in addenda, look for specific Innssist element with propina attribute
-    if (!propina) {
-      console.log('❌ No se encontró propina en addenda, buscando en elementos Innssist...');
-      
-      const innssistSelectors = [
-        'Innssist',
-        'innssist\\:Innssist',
-        '[*|Innssist]'
-      ];
-      
-      for (const selector of innssistSelectors) {
-        const innssistElements = safeGetElements(selector);
-        console.log(`   - Selector Innssist "${selector}": ${innssistElements.length} elemento(s) encontrado(s)`);
-        
-        for (const element of innssistElements) {
-          console.log(`      🔍 Examinando Innssist: ${element.tagName}`);
-          if (element.attributes) {
-            console.log(`         - Atributos totales: ${element.attributes.length}`);
-            for (let i = 0; i < element.attributes.length; i++) {
-              const attr = element.attributes[i];
-              console.log(`            ${attr.name}: ${attr.value}`);
-            }
-          }
-          
-          const propinaValue = safeGetAttribute(element, 'propina');
-          console.log(`         - Atributo 'propina': ${propinaValue || 'NO ENCONTRADO'}`);
-          
-          if (propinaValue && !isNaN(parseFloat(propinaValue)) && parseFloat(propinaValue) > 0) {
-            propina = propinaValue;
-            console.log(`✅ PROPINA ENCONTRADA en Innssist element: ${propina}`);
-            break;
-          }
-        }
-        
-        if (propina) break;
-      }
-    }
-    
-    // Strategy 3: General search for any element with propina attribute
-    if (!propina) {
-      console.log('❌ No se encontró propina en Innssist, buscando en todo el documento...');
-      
-      const allElements = xmlDoc.querySelectorAll('*');
-      for (const element of allElements) {
-        const propinaAttr = safeGetAttribute(element, 'propina');
-        if (propinaAttr && !isNaN(parseFloat(propinaAttr)) && parseFloat(propinaAttr) > 0) {
-          propina = propinaAttr;
-          console.log(`✅ PROPINA ENCONTRADA en búsqueda general: ${propina} from element ${element.tagName}`);
-          break;
-        }
-      }
-    }
-    
     console.log('=== RESULTADO FINAL ===');
     console.log(`IVA: ${impuestoIVA || 'NO ENCONTRADO'}`);
     console.log(`ISH: ${impuestoISH || 'NO ENCONTRADO'}`);
-    console.log(`Propina: ${propina || 'NO ENCONTRADO'}`);
+    console.log(`Propina: Campo en blanco (no extraído del XML)`);
 
       return {
         rfc,
@@ -831,7 +698,7 @@ export const XMLUploader = () => {
         subtotal,
         impuestoIVA,
         impuestoISH,
-        propina,
+        propina: '', // Campo en blanco
         total,
         fileName
       };
