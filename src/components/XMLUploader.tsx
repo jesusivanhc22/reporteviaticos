@@ -40,7 +40,8 @@ export const XMLUploader = () => {
       // Enhanced debugging for problematic files
       const debugMode = fileName.includes('101183718') || fileName.includes('101525703') || 
                        fileName.includes('101525603') || fileName.includes('101183341') ||
-                       fileName.includes('F01-46019');
+                       fileName.includes('F01-46019') || fileName.includes('70d0f8d0-572e-5033-b4a2-0708b2393ab0') ||
+                       fileName.includes('283387ac-bc88-530e-9aef-a28b26430299');
       
       if (debugMode) {
         console.log(`🎯 ===== ANÁLISIS DETALLADO PARA ARCHIVO ${fileName} =====`);
@@ -392,6 +393,9 @@ export const XMLUploader = () => {
       const isIVA = taxType === 'IVA';
       const validationFn = isIVA ? isValidIVAValue : isValidISHValue;
       const taxCode = isIVA ? '002' : '003';
+      
+      console.log(`🔍 DEBUGGING ${taxType} extraction for file: ${fileName}`);
+      console.log(`   Target tax code: ${taxCode}`);
       
       if (debugMode) {
         console.log(`🔍 Extracting ${taxType} with enhanced strategies...`);
