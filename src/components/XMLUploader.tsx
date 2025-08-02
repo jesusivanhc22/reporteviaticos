@@ -69,104 +69,22 @@ export const XMLUploader = () => {
       receptorRfc = receptor.getAttribute('Rfc') || receptor.getAttribute('rfc') || '';
     }
 
-    // ====== IMPROVED ISH EXTRACTION WITH TARGET VALUE SEARCH ======
-    console.log(`=== Iniciando búsqueda mejorada de ISH para archivo: ${fileName} ===`);
+    // ====== ENHANCED GENERIC ISH EXTRACTION WITH HIERARCHICAL SEARCH ======
     
-    // Target values to specifically look for
-    const targetValues = ['105.86'];
-    
-    // Track found values to prevent conflicts
-    const foundValues = new Set<string>();
-    const allFoundValues: { value: string, context: string, source: string }[] = [];
-    
-    // Helper function to validate IVA values with range checking
+    // Enhanced ISH value validation
+    const isValidISHValue = (value: string): boolean => {
+      const numericValue = parseFloat(value);
+      return !isNaN(numericValue) && numericValue >= 10 && numericValue <= 1000;
+    };
+
+    // Enhanced IVA value validation
     const isValidIVAValue = (value: string): boolean => {
       const numericValue = parseFloat(value);
-      // IVA values typically range from 100 to 10000 MXN (16% of subtotal)
       return !isNaN(numericValue) && numericValue >= 100 && numericValue <= 10000;
     };
 
-    // Helper function to validate ISH values with range checking
-    const isValidISHValue = (value: string): boolean => {
-      const numericValue = parseFloat(value);
-      // ISH values typically range from 50 to 500 MXN (smaller than IVA)
-      return !isNaN(numericValue) && numericValue >= 50 && numericValue <= 500;
-    };
-
-    // Helper function to check if value is already assigned to IVA
-    const isNotIVAValue = (value: string): boolean => {
-      return value !== impuestoIVA && !foundValues.has(value);
-    };
-
-    // Helper function to check if context suggests ISH vs IVA
-    const hasISHContext = (element: Element): boolean => {
-      const elementText = element.outerHTML.toLowerCase();
-      const ishKeywords = ['003', 'hospedaje', 'turismo', 'hotel', 'alojamiento', 'ish'];
-      const ivaKeywords = ['002', 'iva', 'valor agregado'];
-      
-      const hasISH = ishKeywords.some(keyword => elementText.includes(keyword));
-      const hasIVA = ivaKeywords.some(keyword => elementText.includes(keyword));
-      
-      return hasISH && !hasIVA;
-    };
-
-    // Enhanced ISH identifier with better patterns
-    const isISHIdentifier = (code: string, name: string = '', description: string = '', context: string = ''): boolean => {
-      const searchText = `${code} ${name} ${description} ${context}`.toLowerCase();
-      
-      // Strong exclusion for IVA patterns
-      const ivaPatterns = ['002', 'iva', 'value.*added', 'valor.*agregado', 'impuesto.*valor.*agregado'];
-      if (ivaPatterns.some(pattern => {
-        if (pattern.includes('.*')) {
-          return new RegExp(pattern, 'i').test(searchText);
-        }
-        return searchText.includes(pattern);
-      })) {
-        console.log(`❌ Excluido por ser IVA: ${code} ${name} ${description}`);
-        return false;
-      }
-      
-      // Enhanced ISH patterns with more specific matching
-      const ishPatterns = [
-        '003',  // ISH tax code
-        'ish',
-        'hospedaje',
-        'hotel',
-        'turismo',
-        'tourism',
-        'alojamiento',
-        'estancia',
-        'habitacion',
-        'lodging',
-        'impuesto.*hospedaje',
-        'tasa.*turistica',
-        'cuota.*hotelera'
-      ];
-      
-      const isISH = ishPatterns.some(pattern => {
-        if (pattern.includes('.*')) {
-          return new RegExp(pattern, 'i').test(searchText);
-        }
-        return searchText.includes(pattern);
-      });
-      
-      if (isISH) {
-        console.log(`✓ Identificado como ISH: ${code} ${name} ${description}`);
-      }
-      
-      return isISH;
-    };
-
-    // Enhanced logging function
-    const logValueFound = (value: string, source: string, context: string, isTarget: boolean = false) => {
-      allFoundValues.push({ value, context, source });
-      const prefix = isTarget ? '🎯 TARGET' : '📍 FOUND';
-      console.log(`${prefix} - Valor: ${value} | Fuente: ${source} | Contexto: ${context}`);
-    };
-
-    // STEP 1: First pass - identify and mark IVA values
+    // STEP 1: Identify IVA values first to avoid conflicts
     console.log('=== PASO 1: Identificando valores IVA ===');
-    
     const traslados = xmlDoc.querySelectorAll('Traslado');
     traslados.forEach((traslado, index) => {
       const impuesto = traslado.getAttribute('Impuesto') || '';
@@ -174,185 +92,171 @@ export const XMLUploader = () => {
       
       if (impuesto === '002' && importe && isValidIVAValue(importe)) {
         impuestoIVA = importe;
-        foundValues.add(importe);
-        logValueFound(importe, 'IVA (código 002)', `Traslado ${index + 1}`);
+        console.log(`✅ IVA encontrado: ${importe} en Traslado ${index + 1}`);
       }
     });
 
-    // STEP 2: Search for target ISH values specifically
-    console.log('=== PASO 2: Búsqueda dirigida de valores objetivo ISH ===');
+    // STEP 2: Execute hierarchical ISH search
+    console.log('=== PASO 2: Búsqueda jerárquica de ISH ===');
     
-    for (const targetValue of targetValues) {
-      if (impuestoISH) break; // Stop if we already found ISH
+    const findISHValue = (): string => {
+      const candidateValues: Array<{ 
+        value: string; 
+        context: string; 
+        source: string; 
+        priority: number;
+      }> = [];
       
-      console.log(`🔍 Buscando valor objetivo: ${targetValue}`);
-      const todosLosNodos = xmlDoc.querySelectorAll('*');
-      
-      for (const nodo of todosLosNodos) {
-        if (impuestoISH) break;
-        
-        const attrs = Array.from(nodo.attributes || []);
-        for (const attr of attrs) {
-          if (attr.value === targetValue && isNotIVAValue(attr.value) && isValidISHValue(attr.value)) {
-            const context = `${nodo.tagName}.${attr.name}`;
-            const nodeContext = nodo.outerHTML.substring(0, 200);
-            
-            // Enhanced context analysis for ISH
-            const hasISHContextFlag = hasISHContext(nodo);
-            const isISHByIdentifier = isISHIdentifier(attr.name, nodo.tagName, '', nodeContext);
-            
-            if (hasISHContextFlag || isISHByIdentifier) {
-              impuestoISH = targetValue;
-              foundValues.add(targetValue);
-              logValueFound(targetValue, `Búsqueda dirigida ISH (contexto:${hasISHContextFlag}, id:${isISHByIdentifier})`, context, true);
-              console.log('✅ VALOR OBJETIVO ENCONTRADO Y ASIGNADO');
-              break;
-            } else {
-              logValueFound(targetValue, 'Valor encontrado (contexto no confirmado como ISH)', context);
-            }
-          }
-        }
-      }
-    }
+      const isNotIVAValue = (value: string): boolean => {
+        return value !== impuestoIVA;
+      };
 
-    // STEP 3: If target not found, use enhanced search with priority
-    if (!impuestoISH) {
-      console.log('=== PASO 3: Búsqueda avanzada con prioridades ===');
+      const logCandidate = (value: string, source: string, context: string, priority: number) => {
+        const priorityLabel = priority >= 80 ? '🔥 ALTA' : 
+                             priority >= 40 ? '📍 MEDIA' : 
+                             priority >= 0 ? '📋 BAJA' : '❌ NEGATIVA';
+        console.log(`${priorityLabel} (${priority}): ${value} | ${source} | ${context}`);
+      };
+
+      // PHASE 1: Search for explicit ISH fiscal structures (highest priority)
+      console.log('--- FASE 1: Estructuras fiscales explícitas de ISH ---');
       
-      // Priority 1: ISH tax codes in tax nodes
-      console.log('Prioridad 1: Códigos de impuesto ISH...');
-      
-      traslados.forEach((traslado, index) => {
-        if (impuestoISH) return;
-        
-        const impuesto = traslado.getAttribute('Impuesto') || '';
-        const importe = traslado.getAttribute('Importe') || traslado.getAttribute('Valor') || '';
-        
-        if (isISHIdentifier(impuesto) && importe && isValidISHValue(importe) && isNotIVAValue(importe)) {
-          impuestoISH = importe;
-          foundValues.add(importe);
-          logValueFound(importe, `ISH código ${impuesto}`, `Traslado ${index + 1}`);
-        }
+      // Look for implocal:ImpuestosLocales with ImpLocTraslado="ISH"
+      const impuestosLocales = xmlDoc.querySelectorAll('ImpuestosLocales, implocal\\:ImpuestosLocales');
+      impuestosLocales.forEach((impLocal, index) => {
+        const traslados = impLocal.querySelectorAll('ImpLocTraslado, implocal\\:ImpLocTraslado');
+        traslados.forEach((traslado) => {
+          const tipoTraslado = traslado.getAttribute('ImpLocTraslado') || '';
+          const importe = traslado.getAttribute('Importe') || '';
+          
+          if (tipoTraslado.toUpperCase() === 'ISH' && importe && isValidISHValue(importe) && isNotIVAValue(importe)) {
+            candidateValues.push({
+              value: importe,
+              context: `ImpuestosLocales[${index}].ImpLocTraslado[ISH]`,
+              source: 'Estructura fiscal explícita ISH',
+              priority: 100
+            });
+            logCandidate(importe, 'Estructura fiscal explícita ISH', `ImpuestosLocales[${index}]`, 100);
+          }
+        });
       });
-      
-      // Priority 2: Local taxes
-      if (!impuestoISH) {
-        console.log('Prioridad 2: Impuestos locales...');
-        const impuestosLocales = xmlDoc.querySelectorAll('ImpuestoLocal');
+
+      // PHASE 2: Search by tax code 003 (ISH identifier)
+      if (candidateValues.filter(c => c.priority >= 90).length === 0) {
+        console.log('--- FASE 2: Código de impuesto 003 ---');
         
-        impuestosLocales.forEach((impuestoLocal, index) => {
-          if (impuestoISH) return;
+        traslados.forEach((traslado, index) => {
+          const impuesto = traslado.getAttribute('Impuesto') || '';
+          const importe = traslado.getAttribute('Importe') || traslado.getAttribute('Valor') || '';
           
-          const tipoImpuesto = impuestoLocal.getAttribute('ImpLocTrasladado') || 
-                              impuestoLocal.getAttribute('TipoDeImpuesto') || '';
-          const importe = impuestoLocal.getAttribute('Importe') || '';
-          
-          if (isISHIdentifier('', tipoImpuesto) && importe && isValidISHValue(importe) && isNotIVAValue(importe)) {
-            impuestoISH = importe;
-            foundValues.add(importe);
-            logValueFound(importe, 'Impuesto Local ISH', `ImpuestoLocal ${index + 1}`);
+          if (impuesto === '003' && importe && isValidISHValue(importe) && isNotIVAValue(importe)) {
+            candidateValues.push({
+              value: importe,
+              context: `Traslado[${index}].Impuesto=003`,
+              source: 'Código de impuesto 003',
+              priority: 90
+            });
+            logCandidate(importe, 'Código de impuesto 003', `Traslado[${index}]`, 90);
           }
         });
       }
-      
-      // Priority 3: Hospitality service concepts
-      if (!impuestoISH) {
-        console.log('Prioridad 3: Conceptos de servicios de hospedaje...');
-        const conceptos = xmlDoc.querySelectorAll('Concepto, cfdi\\:Concepto');
-        const hospitalityKeys = ['80101600', '80101601', '80101602', '76111500', '76111501'];
+
+      // PHASE 3: Semantic context search
+      if (candidateValues.filter(c => c.priority >= 70).length === 0) {
+        console.log('--- FASE 3: Contexto semántico ---');
         
-        conceptos.forEach((concepto, index) => {
-          if (impuestoISH) return;
+        const allElements = xmlDoc.querySelectorAll('*');
+        allElements.forEach((element) => {
+          const elementText = element.outerHTML.toLowerCase();
+          let priority = 0;
           
-          const claveProdServ = concepto.getAttribute('ClaveProdServ') || '';
-          const descripcion = concepto.getAttribute('Descripcion') || '';
+          // Calculate semantic priority
+          if (elementText.includes('impuestoslocales') || elementText.includes('implocal:')) priority += 80;
+          if (elementText.includes('hospedaje')) priority += 70;
+          if (elementText.includes('ish')) priority += 60;
+          if (elementText.includes('turismo') || elementText.includes('tourism')) priority += 50;
+          if (elementText.includes('hotel') || elementText.includes('alojamiento')) priority += 40;
           
-          if (hospitalityKeys.includes(claveProdServ) || isISHIdentifier('', '', descripcion)) {
-            logValueFound('N/A', 'Concepto hospedaje', `${claveProdServ} - ${descripcion}`);
-            
-            const impuestosConcepto = concepto.querySelectorAll('Traslado, Retencion, ImpuestoLocal');
-            impuestosConcepto.forEach(imp => {
-              if (impuestoISH) return;
-              
-              const importe = imp.getAttribute('Importe') || imp.getAttribute('Valor') || '';
-              if (importe && isValidISHValue(importe) && isNotIVAValue(importe)) {
-                impuestoISH = importe;
-                foundValues.add(importe);
-                logValueFound(importe, 'ISH en concepto hospedaje', `Concepto ${index + 1}`);
+          // Negative priority for IVA indicators
+          if (elementText.includes('impuesto="002"') || elementText.includes("impuesto='002'")) priority -= 100;
+          if (elementText.includes('iva') || elementText.includes('valor agregado')) priority -= 50;
+          
+          if (priority > 0) {
+            Array.from(element.attributes || []).forEach((attr) => {
+              if (isValidISHValue(attr.value) && isNotIVAValue(attr.value)) {
+                candidateValues.push({
+                  value: attr.value,
+                  context: `${element.tagName}.${attr.name}`,
+                  source: 'Contexto semántico',
+                  priority: priority
+                });
+                logCandidate(attr.value, 'Contexto semántico', `${element.tagName}.${attr.name}`, priority);
               }
             });
           }
         });
       }
-      
-      // Priority 4: Value range filtering with context analysis
-      if (!impuestoISH) {
-        console.log('Prioridad 4: Análisis de rango de valores...');
+
+      // PHASE 4: Range-based fallback
+      if (candidateValues.filter(c => c.priority >= 20).length === 0) {
+        console.log('--- FASE 4: Búsqueda de respaldo ---');
         
-        // Find all potential ISH values (excluding already found IVA values)
-        const potentialValues: { value: string, numericValue: number, context: string }[] = [];
-        
-        allFoundValues.forEach(item => {
-          const numericValue = parseFloat(item.value);
-          if (isValidISHValue(item.value) && isNotIVAValue(item.value)) {
-            potentialValues.push({
-              value: item.value,
-              numericValue,
-              context: item.context
-            });
-          }
+        const allElements = xmlDoc.querySelectorAll('*');
+        allElements.forEach((element) => {
+          Array.from(element.attributes || []).forEach((attr) => {
+            if (isValidISHValue(attr.value) && isNotIVAValue(attr.value)) {
+              const numericValue = parseFloat(attr.value);
+              const rangeScore = numericValue >= 50 && numericValue <= 400 ? 20 : 10;
+              
+              candidateValues.push({
+                value: attr.value,
+                context: `${element.tagName}.${attr.name}`,
+                source: 'Búsqueda de respaldo',
+                priority: rangeScore
+              });
+              logCandidate(attr.value, 'Búsqueda de respaldo', `${element.tagName}.${attr.name}`, rangeScore);
+            }
+          });
         });
-        
-        // Sort by preference (values closer to typical ISH range 200-400)
-        potentialValues.sort((a, b) => {
-          const aDist = Math.abs(a.numericValue - 300);
-          const bDist = Math.abs(b.numericValue - 300);
+      }
+
+      // Select best candidate
+      if (candidateValues.length > 0) {
+        candidateValues.sort((a, b) => {
+          if (a.priority !== b.priority) return b.priority - a.priority;
+          
+          // If same priority, prefer values closer to typical ISH range
+          const aValue = parseFloat(a.value);
+          const bValue = parseFloat(b.value);
+          const aDist = Math.abs(aValue - 200);
+          const bDist = Math.abs(bValue - 200);
           return aDist - bDist;
         });
         
-        if (potentialValues.length > 0) {
-          const bestCandidate = potentialValues[0];
-          impuestoISH = bestCandidate.value;
-          foundValues.add(impuestoISH);
-          logValueFound(impuestoISH, 'Mejor candidato por rango', bestCandidate.context);
-        }
+        const bestCandidate = candidateValues[0];
+        console.log(`✅ ISH SELECCIONADO: ${bestCandidate.value} (prioridad: ${bestCandidate.priority})`);
+        console.log(`   Fuente: ${bestCandidate.source}`);
+        console.log(`   Contexto: ${bestCandidate.context}`);
+        
+        return bestCandidate.value;
       }
-    }
+      
+      console.log('❌ No se encontró valor ISH válido');
+      return '';
+    };
 
-    // STEP 4: Final validation and conflict resolution
-    console.log('=== PASO 4: Validación final ===');
-    console.log(`Todos los valores encontrados: ${allFoundValues.length}`);
-    allFoundValues.forEach(item => {
-      console.log(`  - ${item.value} en ${item.context} (${item.source})`);
-    });
-    
-    // Ensure no conflicts between IVA and ISH
+    // Execute ISH search
+    impuestoISH = findISHValue();
+
+    // Final validation and conflict resolution
     if (impuestoISH && impuestoISH === impuestoIVA) {
       console.log('⚠️ CONFLICTO: ISH = IVA, limpiando ISH');
       impuestoISH = '';
     }
     
-    // Final logging
     console.log('=== RESULTADO FINAL ===');
     console.log(`IVA: ${impuestoIVA || 'NO ENCONTRADO'}`);
     console.log(`ISH: ${impuestoISH || 'NO ENCONTRADO'}`);
-    
-    if (impuestoISH) {
-      const isTarget = targetValues.includes(impuestoISH);
-      console.log(`✅ ISH ${isTarget ? '(VALOR OBJETIVO)' : ''} ASIGNADO: ${impuestoISH}`);
-    } else {
-      console.log('❌ ISH NO ENCONTRADO');
-      
-      // Debug: Show why target values were not found
-      targetValues.forEach(target => {
-        const targetFound = allFoundValues.filter(item => item.value === target);
-        if (targetFound.length > 0) {
-          console.log(`🔍 Valor objetivo ${target} encontrado en:`, targetFound);
-        } else {
-          console.log(`🔍 Valor objetivo ${target} NO encontrado en el XML`);
-        }
-      });
-    }
 
     return {
       rfc,
