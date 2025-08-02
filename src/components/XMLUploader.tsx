@@ -14,9 +14,11 @@ interface XMLData {
   emisorRfc?: string;
   receptorRfc?: string;
   fecha?: string;
+  nombre?: string;
   subtotal?: string;
   impuestoIVA?: string;
   impuestoISH?: string;
+  propina?: string;
   total?: string;
   fileName: string;
 }
@@ -54,9 +56,11 @@ export const XMLUploader = () => {
       let emisorRfc = '';
       let receptorRfc = '';
       let fecha = '';
+      let nombre = '';
       let subtotal = '';
       let impuestoIVA = '';
       let impuestoISH = '';
+      let propina = '';
       let total = '';
 
       // Safe element extraction with error handling
@@ -133,7 +137,7 @@ export const XMLUploader = () => {
         rfc = emisorRfc; // Por defecto, usar el RFC del emisor
       }
 
-      // Buscar RFC del receptor
+      // Buscar RFC del receptor y nombre
       const receptor = tryMultipleSelectors([
         'Receptor',
         'cfdi\\:Receptor',
@@ -141,6 +145,7 @@ export const XMLUploader = () => {
       ]);
       if (receptor) {
         receptorRfc = safeGetAttribute(receptor, 'Rfc') || safeGetAttribute(receptor, 'rfc');
+        nombre = safeGetAttribute(receptor, 'Nombre') || safeGetAttribute(receptor, 'nombre');
       }
 
     // ====== DETAILED XML STRUCTURE ANALYSIS FOR PROBLEMATIC FILES ======
@@ -678,9 +683,68 @@ export const XMLUploader = () => {
       console.log(`   🏨 ISH: ${impuestoISH || 'NO ENCONTRADO'}`);
     }
     
+    // ====== EXTRACTION OF PROPINA (TIP) ======
+    console.log('=== EXTRACTING PROPINA ===');
+    
+    // Strategy 1: Look for "propina" in element names or attributes
+    const allElements = xmlDoc.querySelectorAll('*');
+    for (const element of allElements) {
+      if (!element.attributes) continue;
+      
+      // Check element name for propina indicators
+      const elementName = element.tagName.toLowerCase();
+      if (elementName.includes('propina') || elementName.includes('tip') || elementName.includes('servicio')) {
+        const amount = safeGetAttribute(element, 'Importe') || 
+                     safeGetAttribute(element, 'Valor') ||
+                     safeGetAttribute(element, 'Monto') ||
+                     safeGetAttribute(element, 'Total');
+        
+        if (amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0) {
+          propina = amount;
+          console.log(`✅ Propina found via element name: ${propina}`);
+          break;
+        }
+      }
+      
+      // Check attributes for propina indicators
+      for (let i = 0; i < element.attributes.length; i++) {
+        const attr = element.attributes[i];
+        if (!attr) continue;
+        
+        const attrName = attr.name.toLowerCase();
+        const attrValue = attr.value.toLowerCase();
+        
+        if (attrName.includes('propina') || attrName.includes('tip') || 
+            attrValue.includes('propina') || attrValue.includes('tip') ||
+            attrValue.includes('servicio')) {
+          
+          // Look for associated amount
+          const candidates = [
+            safeGetAttribute(element, 'Importe'),
+            safeGetAttribute(element, 'Valor'),
+            safeGetAttribute(element, 'Monto'),
+            safeGetAttribute(element, 'Total')
+          ];
+          
+          for (const candidate of candidates) {
+            if (candidate && !isNaN(parseFloat(candidate)) && parseFloat(candidate) > 0) {
+              propina = candidate;
+              console.log(`✅ Propina found via attribute: ${propina}`);
+              break;
+            }
+          }
+          
+          if (propina) break;
+        }
+      }
+      
+      if (propina) break;
+    }
+    
     console.log('=== RESULTADO FINAL ===');
     console.log(`IVA: ${impuestoIVA || 'NO ENCONTRADO'}`);
     console.log(`ISH: ${impuestoISH || 'NO ENCONTRADO'}`);
+    console.log(`Propina: ${propina || 'NO ENCONTRADO'}`);
 
       return {
         rfc,
@@ -688,9 +752,11 @@ export const XMLUploader = () => {
         emisorRfc,
         receptorRfc,
         fecha,
+        nombre,
         subtotal,
         impuestoIVA,
         impuestoISH,
+        propina,
         total,
         fileName
       };
@@ -704,9 +770,11 @@ export const XMLUploader = () => {
         emisorRfc: 'ERROR',
         receptorRfc: 'ERROR',
         fecha: 'ERROR',
+        nombre: 'ERROR',
         subtotal: 'ERROR',
         impuestoIVA: 'ERROR',
         impuestoISH: 'ERROR',
+        propina: 'ERROR',
         fileName: `${fileName} (ERROR)`
       };
     }
@@ -815,9 +883,11 @@ export const XMLUploader = () => {
       'No.': index + 1,
       'Archivo': data.fileName,
       'Fecha': data.fecha || '',
+      'Nombre': data.nombre || '',
       'Subtotal': data.subtotal ? parseFloat(data.subtotal) : '',
       'Impuesto IVA': data.impuestoIVA ? parseFloat(data.impuestoIVA) : '',
       'Impuesto ISH': data.impuestoISH ? parseFloat(data.impuestoISH) : '',
+      'Propina': data.propina ? parseFloat(data.propina) : '',
       'Total': data.total ? parseFloat(data.total) : '',
       'RFC': data.emisorRfc || '',
       'UUID': data.uuid || ''
@@ -833,9 +903,11 @@ export const XMLUploader = () => {
       { wch: 5 },   // No.
       { wch: 30 },  // Archivo
       { wch: 20 },  // Fecha
+      { wch: 25 },  // Nombre
       { wch: 15 },  // Subtotal
       { wch: 15 },  // Impuesto IVA
       { wch: 20 },  // Impuesto ISH
+      { wch: 15 },  // Propina
       { wch: 15 },  // Total
       { wch: 15 },  // RFC
       { wch: 40 }   // UUID
@@ -845,8 +917,8 @@ export const XMLUploader = () => {
     // Aplicar formato a las columnas numéricas
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
     for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-      // Subtotal (columna D)
-      const subtotalCell = XLSX.utils.encode_cell({ r: R, c: 3 });
+      // Subtotal (columna E)
+      const subtotalCell = XLSX.utils.encode_cell({ r: R, c: 4 });
       if (worksheet[subtotalCell] && typeof worksheet[subtotalCell].v === 'number') {
         worksheet[subtotalCell].s = { 
           numFmt: '#,##0.00',
@@ -854,8 +926,8 @@ export const XMLUploader = () => {
         };
       }
       
-      // Impuesto IVA (columna E)
-      const ivaCell = XLSX.utils.encode_cell({ r: R, c: 4 });
+      // Impuesto IVA (columna F)
+      const ivaCell = XLSX.utils.encode_cell({ r: R, c: 5 });
       if (worksheet[ivaCell] && typeof worksheet[ivaCell].v === 'number') {
         worksheet[ivaCell].s = { 
           numFmt: '#,##0.00',
@@ -863,8 +935,8 @@ export const XMLUploader = () => {
         };
       }
       
-      // Impuesto ISH (columna F)
-      const ishCell = XLSX.utils.encode_cell({ r: R, c: 5 });
+      // Impuesto ISH (columna G)
+      const ishCell = XLSX.utils.encode_cell({ r: R, c: 6 });
       if (worksheet[ishCell] && typeof worksheet[ishCell].v === 'number') {
         worksheet[ishCell].s = { 
           numFmt: '#,##0.00',
@@ -872,8 +944,17 @@ export const XMLUploader = () => {
         };
       }
       
-      // Total (columna G)
-      const totalCell = XLSX.utils.encode_cell({ r: R, c: 6 });
+      // Propina (columna H)
+      const propinaCell = XLSX.utils.encode_cell({ r: R, c: 7 });
+      if (worksheet[propinaCell] && typeof worksheet[propinaCell].v === 'number') {
+        worksheet[propinaCell].s = { 
+          numFmt: '#,##0.00',
+          alignment: { horizontal: 'right' }
+        };
+      }
+      
+      // Total (columna I)
+      const totalCell = XLSX.utils.encode_cell({ r: R, c: 8 });
       if (worksheet[totalCell] && typeof worksheet[totalCell].v === 'number') {
         worksheet[totalCell].s = { 
           numFmt: '#,##0.00',
@@ -964,9 +1045,11 @@ export const XMLUploader = () => {
                   <TableRow className="hover:bg-muted/50">
                     <TableHead className="font-semibold">Archivo</TableHead>
                     <TableHead className="font-semibold">Fecha</TableHead>
+                    <TableHead className="font-semibold">Nombre</TableHead>
                     <TableHead className="font-semibold">Subtotal</TableHead>
                     <TableHead className="font-semibold">Impuesto IVA</TableHead>
                     <TableHead className="font-semibold">Impuesto ISH</TableHead>
+                    <TableHead className="font-semibold">Propina</TableHead>
                     <TableHead className="font-semibold">Total</TableHead>
                     <TableHead className="font-semibold">RFC</TableHead>
                     <TableHead className="font-semibold">UUID</TableHead>
@@ -996,6 +1079,32 @@ export const XMLUploader = () => {
                                 size="sm"
                                 className="h-6 w-6 p-0"
                                 onClick={() => copyToClipboard(data.fecha!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-destructive" />
+                              <span className="text-sm text-muted-foreground">No encontrado</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {data.nombre ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-success" />
+                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
+                                {data.nombre}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => copyToClipboard(data.nombre!)}
                               >
                                 <Copy className="w-3 h-3" />
                               </Button>
@@ -1071,6 +1180,29 @@ export const XMLUploader = () => {
                                 size="sm"
                                 className="h-6 w-6 p-0"
                                 onClick={() => copyToClipboard(data.impuestoISH!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div className="flex items-center gap-2 justify-end">
+                          {data.propina ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-success" />
+                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
+                                ${data.propina}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => copyToClipboard(data.propina!)}
                               >
                                 <Copy className="w-3 h-3" />
                               </Button>
@@ -1161,7 +1293,7 @@ export const XMLUploader = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const allData = `Archivo: ${data.fileName}\nFecha: ${data.fecha || ''}\nSubtotal: ${data.subtotal || ''}\nImpuesto IVA: ${data.impuestoIVA || ''}\nImpuesto ISH: ${data.impuestoISH || ''}\nTotal: ${data.total || ''}\nRFC: ${data.emisorRfc || ''}\nUUID: ${data.uuid || ''}`;
+                            const allData = `Archivo: ${data.fileName}\nFecha: ${data.fecha || ''}\nNombre: ${data.nombre || ''}\nSubtotal: ${data.subtotal || ''}\nImpuesto IVA: ${data.impuestoIVA || ''}\nImpuesto ISH: ${data.impuestoISH || ''}\nPropina: ${data.propina || ''}\nTotal: ${data.total || ''}\nRFC: ${data.emisorRfc || ''}\nUUID: ${data.uuid || ''}`;
                             copyToClipboard(allData);
                           }}
                         >
