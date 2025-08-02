@@ -17,6 +17,7 @@ interface XMLData {
   subtotal?: string;
   impuestoIVA?: string;
   impuestoISH?: string;
+  total?: string;
   fileName: string;
 }
 
@@ -56,6 +57,7 @@ export const XMLUploader = () => {
       let subtotal = '';
       let impuestoIVA = '';
       let impuestoISH = '';
+      let total = '';
 
       // Safe element extraction with error handling
       const safeGetElement = (selector: string): Element | null => {
@@ -114,9 +116,10 @@ export const XMLUploader = () => {
         if (!uuid) {
           uuid = safeGetAttribute(comprobante, 'UUID');
         }
-        // Extraer fecha y subtotal del Comprobante
+        // Extraer fecha, subtotal y total del Comprobante
         fecha = safeGetAttribute(comprobante, 'Fecha') || safeGetAttribute(comprobante, 'fecha');
         subtotal = safeGetAttribute(comprobante, 'SubTotal') || safeGetAttribute(comprobante, 'subtotal');
+        total = safeGetAttribute(comprobante, 'Total') || safeGetAttribute(comprobante, 'total');
       }
 
       // Buscar RFC del emisor
@@ -688,6 +691,7 @@ export const XMLUploader = () => {
         subtotal,
         impuestoIVA,
         impuestoISH,
+        total,
         fileName
       };
     } catch (error) {
@@ -814,6 +818,7 @@ export const XMLUploader = () => {
       'Subtotal': data.subtotal ? parseFloat(data.subtotal) : '',
       'Impuesto IVA': data.impuestoIVA ? parseFloat(data.impuestoIVA) : '',
       'Impuesto ISH': data.impuestoISH ? parseFloat(data.impuestoISH) : '',
+      'Total': data.total ? parseFloat(data.total) : '',
       'RFC': data.emisorRfc || '',
       'UUID': data.uuid || ''
     }));
@@ -831,6 +836,7 @@ export const XMLUploader = () => {
       { wch: 15 },  // Subtotal
       { wch: 15 },  // Impuesto IVA
       { wch: 20 },  // Impuesto ISH
+      { wch: 15 },  // Total
       { wch: 15 },  // RFC
       { wch: 40 }   // UUID
     ];
@@ -861,6 +867,15 @@ export const XMLUploader = () => {
       const ishCell = XLSX.utils.encode_cell({ r: R, c: 5 });
       if (worksheet[ishCell] && typeof worksheet[ishCell].v === 'number') {
         worksheet[ishCell].s = { 
+          numFmt: '#,##0.00',
+          alignment: { horizontal: 'right' }
+        };
+      }
+      
+      // Total (columna G)
+      const totalCell = XLSX.utils.encode_cell({ r: R, c: 6 });
+      if (worksheet[totalCell] && typeof worksheet[totalCell].v === 'number') {
+        worksheet[totalCell].s = { 
           numFmt: '#,##0.00',
           alignment: { horizontal: 'right' }
         };
@@ -952,6 +967,7 @@ export const XMLUploader = () => {
                     <TableHead className="font-semibold">Subtotal</TableHead>
                     <TableHead className="font-semibold">Impuesto IVA</TableHead>
                     <TableHead className="font-semibold">Impuesto ISH</TableHead>
+                    <TableHead className="font-semibold">Total</TableHead>
                     <TableHead className="font-semibold">RFC</TableHead>
                     <TableHead className="font-semibold">UUID</TableHead>
                     <TableHead className="w-[100px] font-semibold">Acciones</TableHead>
@@ -1067,6 +1083,29 @@ export const XMLUploader = () => {
                       
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          {data.total ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-success" />
+                              <span className="font-mono text-sm bg-background px-2 py-1 rounded border">
+                                ${data.total}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => copyToClipboard(data.total!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div className="flex items-center gap-2">
                           {data.emisorRfc ? (
                             <>
                               <CheckCircle className="w-4 h-4 text-success" />
@@ -1122,7 +1161,7 @@ export const XMLUploader = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const allData = `Archivo: ${data.fileName}\nFecha: ${data.fecha || ''}\nSubtotal: ${data.subtotal || ''}\nImpuesto IVA: ${data.impuestoIVA || ''}\nImpuesto ISH: ${data.impuestoISH || ''}\nRFC: ${data.emisorRfc || ''}\nUUID: ${data.uuid || ''}`;
+                            const allData = `Archivo: ${data.fileName}\nFecha: ${data.fecha || ''}\nSubtotal: ${data.subtotal || ''}\nImpuesto IVA: ${data.impuestoIVA || ''}\nImpuesto ISH: ${data.impuestoISH || ''}\nTotal: ${data.total || ''}\nRFC: ${data.emisorRfc || ''}\nUUID: ${data.uuid || ''}`;
                             copyToClipboard(allData);
                           }}
                         >

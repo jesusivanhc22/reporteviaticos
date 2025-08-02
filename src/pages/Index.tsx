@@ -7,11 +7,10 @@ const Index = () => {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-success bg-clip-text text-transparent">
-              Extractor de RFC y UUID
+              Reporte de viáticos
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Sube tus archivos XML de facturas electrónicas para extraer automáticamente 
-              los datos de RFC y UUID de manera rápida y segura.
+              Sube tus archivos XML de facturas electrónicas
             </p>
           </div>
           
