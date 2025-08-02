@@ -69,8 +69,8 @@ export const XMLUploader = () => {
       receptorRfc = receptor.getAttribute('Rfc') || receptor.getAttribute('rfc') || '';
     }
 
-    // ====== REFINED ISH EXTRACTION STRATEGY ======
-    console.log('=== Iniciando búsqueda refinada de ISH ===');
+    // ====== ENHANCED ISH EXTRACTION STRATEGY ======
+    console.log('=== Iniciando búsqueda mejorada de ISH ===');
     
     // Helper function to validate ISH values
     const isValidISHValue = (value: string): boolean => {
@@ -78,12 +78,81 @@ export const XMLUploader = () => {
       return !isNaN(numericValue) && numericValue > 0;
     };
 
-    // Helper function to check ISH identification
-    const isISHIdentifier = (code: string, name: string = ''): boolean => {
-      return code === '003' || 
-             code?.toLowerCase().includes('ish') || 
-             name?.toLowerCase().includes('ish') || 
-             name?.toLowerCase().includes('hospedaje');
+    // Enhanced ISH identifier patterns
+    const isISHIdentifier = (code: string, name: string = '', description: string = ''): boolean => {
+      const patterns = [
+        // Tax codes
+        '003', 'ISH', 'ish',
+        // Names and descriptions
+        'hospedaje', 'hospedage', 'hotel', 'tourism', 'turismo',
+        'alojamiento', 'estancia', 'habitacion', 'lodging',
+        // Common ISH variations
+        'impuesto.*hospedaje', 'imp.*hosp', 'tax.*tourism',
+        'tasa.*turistica', 'cuota.*hotelera'
+      ];
+      
+      const searchText = `${code} ${name} ${description}`.toLowerCase();
+      return patterns.some(pattern => {
+        if (pattern.includes('.*')) {
+          return new RegExp(pattern).test(searchText);
+        }
+        return searchText.includes(pattern);
+      });
+    };
+
+    // Enhanced complement search function
+    const searchInComplements = (element: Element): string => {
+      const complements = element.querySelectorAll('Complemento, cfdi\\:Complemento, ComplementoConcepto, TurismoConcepto, HospedajeConcepto');
+      
+      for (const complement of complements) {
+        const compType = complement.getAttribute('tipo') || complement.getAttribute('Type') || '';
+        const compName = complement.nodeName || '';
+        console.log(`Analizando complemento: ${compName} tipo: ${compType}`);
+        
+        // Search within complement for tourism/hospitality specific nodes
+        const allNodes = complement.querySelectorAll('*');
+        for (const node of allNodes) {
+          const attrs = Array.from(node.attributes || []);
+          for (const attr of attrs) {
+            if (isISHIdentifier('', attr.name, attr.value) && isValidISHValue(attr.value)) {
+              console.log(`✓ ISH encontrado en complemento ${compName}:`, attr.value);
+              return attr.value;
+            }
+          }
+        }
+      }
+      return '';
+    };
+
+    // Search by product/service key patterns
+    const searchByProductKey = (): string => {
+      const conceptos = xmlDoc.querySelectorAll('Concepto, cfdi\\:Concepto');
+      const hospitalityKeys = ['80101600', '80101601', '80101602', '76111500', '76111501'];
+      
+      for (const concepto of conceptos) {
+        const claveProdServ = concepto.getAttribute('ClaveProdServ') || '';
+        const descripcion = concepto.getAttribute('Descripcion') || '';
+        
+        if (hospitalityKeys.includes(claveProdServ) || 
+            isISHIdentifier('', '', descripcion)) {
+          console.log(`Concepto de hospedaje encontrado: ${claveProdServ} - ${descripcion}`);
+          
+          // Search for taxes in this hospitality concept
+          const impuestosConcepto = concepto.querySelectorAll('Traslado, Retencion, ImpuestoLocal');
+          for (const imp of impuestosConcepto) {
+            const importe = imp.getAttribute('Importe') || imp.getAttribute('Valor') || '';
+            if (isValidISHValue(importe)) {
+              console.log(`✓ ISH encontrado por clave de servicio:`, importe);
+              return importe;
+            }
+          }
+          
+          // Search in complement within this concept
+          const compResult = searchInComplements(concepto);
+          if (compResult) return compResult;
+        }
+      }
+      return '';
     };
 
     // PRIORITY 1: Buscar en nodos específicos de impuestos (Traslado, Retencion, ImpuestoLocal)
@@ -161,14 +230,33 @@ export const XMLUploader = () => {
       });
     }
 
-    // PRIORITY 2: Buscar en conceptos con impuestos anidados
+    // PRIORITY 2: Buscar por clave de servicio de hospedaje
     if (!impuestoISH) {
-      console.log('2. PRIORIDAD MEDIA: Buscando en Conceptos...');
+      console.log('2. BÚSQUEDA POR CLAVE DE PRODUCTO/SERVICIO...');
+      impuestoISH = searchByProductKey();
+    }
+
+    // PRIORITY 3: Buscar en complementos especializados
+    if (!impuestoISH) {
+      console.log('3. BÚSQUEDA EN COMPLEMENTOS...');
+      impuestoISH = searchInComplements(xmlDoc.documentElement);
+    }
+
+    // PRIORITY 4: Buscar en conceptos con impuestos anidados (método tradicional)
+    if (!impuestoISH) {
+      console.log('4. PRIORIDAD MEDIA: Buscando en Conceptos con búsqueda extendida...');
       const conceptos = xmlDoc.querySelectorAll('Concepto, cfdi\\:Concepto');
       console.log(`Conceptos encontrados: ${conceptos.length}`);
       
       conceptos.forEach((concepto, index) => {
-        console.log(`Concepto ${index + 1}:`, concepto.getAttribute('Descripcion') || 'Sin descripción');
+        const descripcion = concepto.getAttribute('Descripcion') || '';
+        const claveProdServ = concepto.getAttribute('ClaveProdServ') || '';
+        console.log(`Concepto ${index + 1}:`, { descripcion, claveProdServ });
+        
+        // Enhanced concept search with description patterns
+        if (isISHIdentifier('', '', descripcion)) {
+          console.log(`Concepto con descripción relevante encontrado: ${descripcion}`);
+        }
         
         // Buscar impuestos dentro del concepto
         const impuestosConcepto = concepto.querySelectorAll('Traslado, Retencion, ImpuestoLocal');
@@ -180,7 +268,9 @@ export const XMLUploader = () => {
                          imp.getAttribute('importe') || 
                          imp.getAttribute('Valor') || '';
           
-          if ((isISHIdentifier(impuesto) || isISHIdentifier('', tipoImpuesto)) && isValidISHValue(importe)) {
+          console.log(`  Impuesto en concepto: código=${impuesto}, tipo=${tipoImpuesto}, importe=${importe}`);
+          
+          if ((isISHIdentifier(impuesto, tipoImpuesto, descripcion)) && isValidISHValue(importe)) {
             impuestoISH = importe;
             console.log(`✓ ISH encontrado en impuesto de concepto:`, importe);
             console.log(`Contexto completo:`, imp.outerHTML);
@@ -189,9 +279,9 @@ export const XMLUploader = () => {
       });
     }
 
-    // PRIORITY 3: Buscar en nodo Impuestos con totales
+    // PRIORITY 5: Buscar en nodo Impuestos con totales
     if (!impuestoISH) {
-      console.log('3. PRIORIDAD BAJA: Buscando en totales de impuestos...');
+      console.log('5. PRIORIDAD BAJA: Buscando en totales de impuestos...');
       const impuestos = xmlDoc.querySelector('Impuestos');
       if (impuestos) {
         console.log('Nodo Impuestos encontrado, analizando atributos...');
@@ -215,9 +305,39 @@ export const XMLUploader = () => {
       }
     }
 
-    // PRIORITY 4: Búsqueda exhaustiva con validación estricta (solo si valor específico 105.86)
+    // PRIORITY 6: Enhanced value pattern search
     if (!impuestoISH) {
-      console.log('4. ÚLTIMA INSTANCIA: Búsqueda exhaustiva del valor 105.86...');
+      console.log('6. BÚSQUEDA POR PATRONES DE VALOR...');
+      
+      // Search for specific values that might be ISH (common ranges)
+      const todosLosNodos = xmlDoc.querySelectorAll('*');
+      const potentialISHValues: { value: string, context: string }[] = [];
+      
+      todosLosNodos.forEach(nodo => {
+        Array.from(nodo.attributes || []).forEach(attr => {
+          const value = parseFloat(attr.value);
+          // Common ISH ranges (usually between 1-1000 for most cases)
+          if (!isNaN(value) && value > 1 && value < 1000) {
+            const context = `${nodo.tagName}.${attr.name}`;
+            // Check if the context suggests it might be ISH-related
+            if (isISHIdentifier(attr.name, nodo.tagName, nodo.outerHTML.substring(0, 200))) {
+              potentialISHValues.push({ value: attr.value, context });
+              console.log(`Valor potencial ISH encontrado: ${attr.value} en ${context}`);
+            }
+          }
+        });
+      });
+      
+      // If we found potential values, use the first one
+      if (potentialISHValues.length > 0) {
+        impuestoISH = potentialISHValues[0].value;
+        console.log(`✓ ISH asignado desde búsqueda por patrones:`, impuestoISH);
+      }
+    }
+
+    // PRIORITY 7: Última instancia - búsqueda exhaustiva de valor específico
+    if (!impuestoISH) {
+      console.log('7. ÚLTIMA INSTANCIA: Búsqueda exhaustiva del valor 105.86...');
       const todosLosNodos = xmlDoc.querySelectorAll('*');
       let encontrados = 0;
       
