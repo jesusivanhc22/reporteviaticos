@@ -73,22 +73,41 @@ export const XMLUploader = () => {
     console.log(`=== Iniciando búsqueda mejorada de ISH para archivo: ${fileName} ===`);
     
     // Target values to specifically look for
-    const targetValues = ['328.31'];
+    const targetValues = ['105.86'];
     
     // Track found values to prevent conflicts
     const foundValues = new Set<string>();
     const allFoundValues: { value: string, context: string, source: string }[] = [];
     
+    // Helper function to validate IVA values with range checking
+    const isValidIVAValue = (value: string): boolean => {
+      const numericValue = parseFloat(value);
+      // IVA values typically range from 100 to 10000 MXN (16% of subtotal)
+      return !isNaN(numericValue) && numericValue >= 100 && numericValue <= 10000;
+    };
+
     // Helper function to validate ISH values with range checking
     const isValidISHValue = (value: string): boolean => {
       const numericValue = parseFloat(value);
-      // ISH values typically range from 50 to 1000 MXN
-      return !isNaN(numericValue) && numericValue >= 50 && numericValue <= 1000;
+      // ISH values typically range from 50 to 500 MXN (smaller than IVA)
+      return !isNaN(numericValue) && numericValue >= 50 && numericValue <= 500;
     };
 
     // Helper function to check if value is already assigned to IVA
     const isNotIVAValue = (value: string): boolean => {
       return value !== impuestoIVA && !foundValues.has(value);
+    };
+
+    // Helper function to check if context suggests ISH vs IVA
+    const hasISHContext = (element: Element): boolean => {
+      const elementText = element.outerHTML.toLowerCase();
+      const ishKeywords = ['003', 'hospedaje', 'turismo', 'hotel', 'alojamiento', 'ish'];
+      const ivaKeywords = ['002', 'iva', 'valor agregado'];
+      
+      const hasISH = ishKeywords.some(keyword => elementText.includes(keyword));
+      const hasIVA = ivaKeywords.some(keyword => elementText.includes(keyword));
+      
+      return hasISH && !hasIVA;
     };
 
     // Enhanced ISH identifier with better patterns
@@ -153,7 +172,7 @@ export const XMLUploader = () => {
       const impuesto = traslado.getAttribute('Impuesto') || '';
       const importe = traslado.getAttribute('Importe') || traslado.getAttribute('Valor') || '';
       
-      if (impuesto === '002' && importe && isValidISHValue(importe)) {
+      if (impuesto === '002' && importe && isValidIVAValue(importe)) {
         impuestoIVA = importe;
         foundValues.add(importe);
         logValueFound(importe, 'IVA (código 002)', `Traslado ${index + 1}`);
@@ -174,19 +193,22 @@ export const XMLUploader = () => {
         
         const attrs = Array.from(nodo.attributes || []);
         for (const attr of attrs) {
-          if (attr.value === targetValue && isNotIVAValue(attr.value)) {
+          if (attr.value === targetValue && isNotIVAValue(attr.value) && isValidISHValue(attr.value)) {
             const context = `${nodo.tagName}.${attr.name}`;
             const nodeContext = nodo.outerHTML.substring(0, 200);
             
-            // Check if this context is likely ISH-related
-            if (isISHIdentifier(attr.name, nodo.tagName, '', nodeContext)) {
+            // Enhanced context analysis for ISH
+            const hasISHContextFlag = hasISHContext(nodo);
+            const isISHByIdentifier = isISHIdentifier(attr.name, nodo.tagName, '', nodeContext);
+            
+            if (hasISHContextFlag || isISHByIdentifier) {
               impuestoISH = targetValue;
               foundValues.add(targetValue);
-              logValueFound(targetValue, 'Búsqueda dirigida ISH', context, true);
+              logValueFound(targetValue, `Búsqueda dirigida ISH (contexto:${hasISHContextFlag}, id:${isISHByIdentifier})`, context, true);
               console.log('✅ VALOR OBJETIVO ENCONTRADO Y ASIGNADO');
               break;
             } else {
-              logValueFound(targetValue, 'Valor encontrado (contexto no ISH)', context);
+              logValueFound(targetValue, 'Valor encontrado (contexto no confirmado como ISH)', context);
             }
           }
         }
