@@ -806,12 +806,12 @@ export const XMLUploader = () => {
     const excelData = xmlData.map((data, index) => ({
       'No.': index + 1,
       'Archivo': data.fileName,
-      'Fecha': data.fecha || 'No encontrado',
-      'Subtotal': data.subtotal || 'No encontrado',
-      'Impuesto IVA': data.impuestoIVA || 'No encontrado',
-      'Impuesto ISH': data.impuestoISH || 'No encontrado',
-      'RFC': data.emisorRfc || 'No encontrado',
-      'UUID': data.uuid || 'No encontrado'
+      'Fecha': data.fecha || '',
+      'Subtotal': data.subtotal ? parseFloat(data.subtotal) : '',
+      'Impuesto IVA': data.impuestoIVA ? parseFloat(data.impuestoIVA) : '',
+      'Impuesto ISH': data.impuestoISH ? parseFloat(data.impuestoISH) : '',
+      'RFC': data.emisorRfc || '',
+      'UUID': data.uuid || ''
     }));
 
     // Crear el libro de trabajo
@@ -831,6 +831,37 @@ export const XMLUploader = () => {
       { wch: 40 }   // UUID
     ];
     worksheet['!cols'] = columnWidths;
+
+    // Aplicar formato a las columnas numéricas
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+      // Subtotal (columna D)
+      const subtotalCell = XLSX.utils.encode_cell({ r: R, c: 3 });
+      if (worksheet[subtotalCell] && typeof worksheet[subtotalCell].v === 'number') {
+        worksheet[subtotalCell].s = { 
+          numFmt: '#,##0.00',
+          alignment: { horizontal: 'right' }
+        };
+      }
+      
+      // Impuesto IVA (columna E)
+      const ivaCell = XLSX.utils.encode_cell({ r: R, c: 4 });
+      if (worksheet[ivaCell] && typeof worksheet[ivaCell].v === 'number') {
+        worksheet[ivaCell].s = { 
+          numFmt: '#,##0.00',
+          alignment: { horizontal: 'right' }
+        };
+      }
+      
+      // Impuesto ISH (columna F)
+      const ishCell = XLSX.utils.encode_cell({ r: R, c: 5 });
+      if (worksheet[ishCell] && typeof worksheet[ishCell].v === 'number') {
+        worksheet[ishCell].s = { 
+          numFmt: '#,##0.00',
+          alignment: { horizontal: 'right' }
+        };
+      }
+    }
 
     // Generar el nombre del archivo con fecha y hora
     const now = new Date();
@@ -1002,10 +1033,7 @@ export const XMLUploader = () => {
                               </Button>
                             </>
                           ) : (
-                            <div className="flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4 text-destructive" />
-                              <span className="text-sm text-muted-foreground">No encontrado</span>
-                            </div>
+                            <span className="text-sm text-muted-foreground">-</span>
                           )}
                         </div>
                       </TableCell>
@@ -1028,10 +1056,7 @@ export const XMLUploader = () => {
                               </Button>
                             </>
                           ) : (
-                            <div className="flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4 text-destructive" />
-                              <span className="text-sm text-muted-foreground">No encontrado</span>
-                            </div>
+                            <span className="text-sm text-muted-foreground">-</span>
                           )}
                         </div>
                       </TableCell>
@@ -1093,7 +1118,7 @@ export const XMLUploader = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const allData = `Archivo: ${data.fileName}\nFecha: ${data.fecha || 'No encontrado'}\nSubtotal: ${data.subtotal || 'No encontrado'}\nImpuesto IVA: ${data.impuestoIVA || 'No encontrado'}\nImpuesto ISH: ${data.impuestoISH || 'No encontrado'}\nRFC: ${data.emisorRfc || 'No encontrado'}\nUUID: ${data.uuid || 'No encontrado'}`;
+                            const allData = `Archivo: ${data.fileName}\nFecha: ${data.fecha || ''}\nSubtotal: ${data.subtotal || ''}\nImpuesto IVA: ${data.impuestoIVA || ''}\nImpuesto ISH: ${data.impuestoISH || ''}\nRFC: ${data.emisorRfc || ''}\nUUID: ${data.uuid || ''}`;
                             copyToClipboard(allData);
                           }}
                         >
