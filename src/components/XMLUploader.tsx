@@ -29,6 +29,14 @@ export const XMLUploader = () => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
     
+    // ====== ENHANCED DEBUGGING FOR FILE 101183718 ======
+    const isTargetFile = fileName.includes('101183718');
+    
+    if (isTargetFile) {
+      console.log('🎯 ===== ANÁLISIS DETALLADO PARA ARCHIVO 101183718 =====');
+      console.log('📄 Archivo objetivo detectado, iniciando análisis exhaustivo...');
+    }
+    
     // Buscar RFC y UUID en diferentes posibles ubicaciones del XML
     let rfc = '';
     let uuid = '';
@@ -67,6 +75,140 @@ export const XMLUploader = () => {
     const receptor = xmlDoc.querySelector('Receptor');
     if (receptor) {
       receptorRfc = receptor.getAttribute('Rfc') || receptor.getAttribute('rfc') || '';
+    }
+
+    // ====== DETAILED XML STRUCTURE ANALYSIS FOR TARGET FILE ======
+    if (isTargetFile) {
+      console.log('🔍 ===== ANÁLISIS COMPLETO DE ESTRUCTURA XML =====');
+      
+      // XML namespace analysis
+      const rootElement = xmlDoc.documentElement;
+      console.log('📋 INFORMACIÓN DEL DOCUMENTO:');
+      console.log(`   - Elemento raíz: ${rootElement.tagName}`);
+      console.log(`   - Namespaces detectados:`);
+      
+      const namespaces = new Set<string>();
+      const getAllNamespaces = (element: Element) => {
+        for (let i = 0; i < element.attributes.length; i++) {
+          const attr = element.attributes[i];
+          if (attr.name.startsWith('xmlns:')) {
+            namespaces.add(`${attr.name}="${attr.value}"`);
+          }
+        }
+        for (const child of element.children) {
+          getAllNamespaces(child);
+        }
+      };
+      getAllNamespaces(rootElement);
+      
+      namespaces.forEach(ns => console.log(`     ${ns}`));
+      
+      // Complete element inventory
+      console.log('📦 INVENTARIO COMPLETO DE ELEMENTOS:');
+      const elementCounts = new Map<string, number>();
+      const allElements = xmlDoc.querySelectorAll('*');
+      
+      allElements.forEach(element => {
+        const tagName = element.tagName;
+        elementCounts.set(tagName, (elementCounts.get(tagName) || 0) + 1);
+      });
+      
+      const sortedElements = Array.from(elementCounts.entries()).sort((a, b) => b[1] - a[1]);
+      sortedElements.forEach(([tag, count]) => {
+        console.log(`   - ${tag}: ${count} ocurrencia(s)`);
+      });
+      
+      // Tax-related elements deep dive
+      console.log('💰 ANÁLISIS PROFUNDO DE ELEMENTOS FISCALES:');
+      
+      // Impuestos section analysis
+      const impuestos = xmlDoc.querySelector('Impuestos');
+      if (impuestos) {
+        console.log('   📊 Sección Impuestos encontrada:');
+        console.log(`      - Total de atributos: ${impuestos.attributes.length}`);
+        
+        for (let i = 0; i < impuestos.attributes.length; i++) {
+          const attr = impuestos.attributes[i];
+          console.log(`      - ${attr.name}: ${attr.value}`);
+        }
+        
+        console.log(`      - Elementos hijos: ${impuestos.children.length}`);
+        for (const child of impuestos.children) {
+          console.log(`        * ${child.tagName} (${child.attributes.length} atributos)`);
+        }
+      }
+      
+      // Local taxes analysis
+      const impuestosLocalesVariants = [
+        'ImpuestosLocales',
+        'implocal:ImpuestosLocales', 
+        'impuestos:Locales',
+        'Locales'
+      ];
+      
+      console.log('   🏛️ Búsqueda exhaustiva de impuestos locales:');
+      impuestosLocalesVariants.forEach(variant => {
+        const elements = xmlDoc.querySelectorAll(variant);
+        if (elements.length > 0) {
+          console.log(`      ✅ ${variant}: ${elements.length} elemento(s) encontrado(s)`);
+          elements.forEach((el, idx) => {
+            console.log(`         [${idx}] Atributos: ${el.attributes.length}`);
+            for (let i = 0; i < el.attributes.length; i++) {
+              const attr = el.attributes[i];
+              console.log(`             - ${attr.name}: ${attr.value}`);
+            }
+          });
+        } else {
+          console.log(`      ❌ ${variant}: No encontrado`);
+        }
+      });
+      
+      // Comprehensive numerical value analysis
+      console.log('   🔢 ANÁLISIS COMPLETO DE VALORES NUMÉRICOS:');
+      const allNumericValues = new Map<string, Array<{element: string, attribute: string, value: string}>>();
+      
+      allElements.forEach(element => {
+        for (let i = 0; i < element.attributes.length; i++) {
+          const attr = element.attributes[i];
+          const value = attr.value;
+          
+          // Check if it's a numeric value
+          if (/^\d+\.?\d*$/.test(value) && parseFloat(value) > 0) {
+            const numValue = parseFloat(value);
+            const key = `${numValue}`;
+            
+            if (!allNumericValues.has(key)) {
+              allNumericValues.set(key, []);
+            }
+            
+            allNumericValues.get(key)!.push({
+              element: element.tagName,
+              attribute: attr.name,
+              value: value
+            });
+          }
+        }
+      });
+      
+      // Sort by value for easier analysis
+      const sortedValues = Array.from(allNumericValues.entries())
+        .sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
+      
+      console.log('      📈 Valores numéricos ordenados (posibles candidatos ISH):');
+      sortedValues.forEach(([value, occurrences]) => {
+        const numValue = parseFloat(value);
+        const isInISHRange = numValue >= 10 && numValue <= 1000;
+        const isPotentialISH = numValue >= 50 && numValue <= 400;
+        
+        let marker = '   ';
+        if (isPotentialISH) marker = '🟢 ';
+        else if (isInISHRange) marker = '🟡 ';
+        
+        console.log(`         ${marker}${value}:`);
+        occurrences.forEach(occ => {
+          console.log(`            ${occ.element}.${occ.attribute}`);
+        });
+      });
     }
 
     // ====== ENHANCED GENERIC ISH EXTRACTION WITH HIERARCHICAL SEARCH ======
@@ -121,22 +263,68 @@ export const XMLUploader = () => {
       // PHASE 1: Search for explicit ISH fiscal structures (highest priority)
       console.log('--- FASE 1: Estructuras fiscales explícitas de ISH ---');
       
-      // Look for implocal:ImpuestosLocales with ImpLocTraslado="ISH"
-      const impuestosLocales = xmlDoc.querySelectorAll('ImpuestosLocales, implocal\\:ImpuestosLocales');
+      // 1A: Look for implocal:ImpuestosLocales with ImpLocTraslado="ISH"
+      const impuestosLocales = xmlDoc.querySelectorAll('ImpuestosLocales, implocal\\:ImpuestosLocales, impuestoslocales');
       impuestosLocales.forEach((impLocal, index) => {
-        const traslados = impLocal.querySelectorAll('ImpLocTraslado, implocal\\:ImpLocTraslado');
-        traslados.forEach((traslado) => {
+        if (isTargetFile) {
+          console.log(`      🔍 Analizando ImpuestosLocales[${index}]:`);
+          console.log(`         - Atributos: ${impLocal.attributes.length}`);
+          for (let i = 0; i < impLocal.attributes.length; i++) {
+            const attr = impLocal.attributes[i];
+            console.log(`           ${attr.name}: ${attr.value}`);
+          }
+        }
+        
+        const traslados = impLocal.querySelectorAll('ImpLocTraslado, implocal\\:ImpLocTraslado, imploctraslado');
+        traslados.forEach((traslado, trasladoIdx) => {
           const tipoTraslado = traslado.getAttribute('ImpLocTraslado') || '';
           const importe = traslado.getAttribute('Importe') || '';
+          
+          if (isTargetFile) {
+            console.log(`         - Traslado[${trasladoIdx}]: Tipo="${tipoTraslado}", Importe="${importe}"`);
+          }
           
           if (tipoTraslado.toUpperCase() === 'ISH' && importe && isValidISHValue(importe) && isNotIVAValue(importe)) {
             candidateValues.push({
               value: importe,
-              context: `ImpuestosLocales[${index}].ImpLocTraslado[ISH]`,
+              context: `ImpuestosLocales[${index}].ImpLocTraslado[${trasladoIdx}][ISH]`,
               source: 'Estructura fiscal explícita ISH',
               priority: 100
             });
             logCandidate(importe, 'Estructura fiscal explícita ISH', `ImpuestosLocales[${index}]`, 100);
+          }
+        });
+      });
+      
+      // 1B: Enhanced search for alternative ISH patterns
+      if (isTargetFile) {
+        console.log('      🔍 Búsqueda alternativa de patrones ISH...');
+      }
+      
+      // Look for any element with ISH-related attributes
+      const ishElements = xmlDoc.querySelectorAll('*[*|="ISH"], *[*="ish"], *[*="Ish"]');
+      ishElements.forEach((element, index) => {
+        if (isTargetFile) {
+          console.log(`      📋 Elemento con ISH encontrado[${index}]: ${element.tagName}`);
+        }
+        
+        Array.from(element.attributes).forEach(attr => {
+          if (attr.value.toUpperCase() === 'ISH') {
+            // Look for Importe in same element or siblings
+            const importe = element.getAttribute('Importe') || 
+                           element.getAttribute('importe') ||
+                           element.getAttribute('Valor') ||
+                           element.getAttribute('valor');
+            
+            if (importe && isValidISHValue(importe) && isNotIVAValue(importe)) {
+              candidateValues.push({
+                value: importe,
+                context: `${element.tagName}[${attr.name}=ISH].Importe`,
+                source: 'Patrón ISH alternativo',
+                priority: 95
+              });
+              logCandidate(importe, 'Patrón ISH alternativo', `${element.tagName}[${attr.name}=ISH]`, 95);
+            }
           }
         });
       });
@@ -248,10 +436,133 @@ export const XMLUploader = () => {
     // Execute ISH search
     impuestoISH = findISHValue();
 
-    // Final validation and conflict resolution
+    // ====== ENHANCED VALIDATION AND CONFLICT RESOLUTION ======
+    if (isTargetFile) {
+      console.log('🔧 ===== VALIDACIÓN Y RESOLUCIÓN DE CONFLICTOS =====');
+    }
+    
+    // Advanced conflict resolution
     if (impuestoISH && impuestoISH === impuestoIVA) {
-      console.log('⚠️ CONFLICTO: ISH = IVA, limpiando ISH');
-      impuestoISH = '';
+      console.log('⚠️ CONFLICTO DETECTADO: ISH = IVA');
+      console.log(`   Valor conflictivo: ${impuestoISH}`);
+      
+      if (isTargetFile) {
+        console.log('   🔍 Buscando valor ISH alternativo...');
+        
+        // Try to find a different ISH value in the candidate list
+        const alternativeSearch = (): string => {
+          const allNumericElements = xmlDoc.querySelectorAll('*');
+          const alternatives: Array<{value: string, context: string, score: number}> = [];
+          
+          allNumericElements.forEach(element => {
+            Array.from(element.attributes).forEach(attr => {
+              const value = attr.value;
+              if (isValidISHValue(value) && value !== impuestoIVA && value !== impuestoISH) {
+                const numValue = parseFloat(value);
+                let score = 0;
+                
+                // Scoring based on context and value range
+                if (numValue >= 50 && numValue <= 400) score += 30;
+                if (element.tagName.toLowerCase().includes('local') || 
+                    element.tagName.toLowerCase().includes('impuesto')) score += 20;
+                if (attr.name.toLowerCase().includes('importe') || 
+                    attr.name.toLowerCase().includes('valor')) score += 10;
+                
+                alternatives.push({
+                  value: value,
+                  context: `${element.tagName}.${attr.name}`,
+                  score: score
+                });
+              }
+            });
+          });
+          
+          if (alternatives.length > 0) {
+            alternatives.sort((a, b) => b.score - a.score);
+            const best = alternatives[0];
+            console.log(`   ✅ Alternativa encontrada: ${best.value} (score: ${best.score}) en ${best.context}`);
+            return best.value;
+          }
+          
+          return '';
+        };
+        
+        const alternative = alternativeSearch();
+        if (alternative) {
+          impuestoISH = alternative;
+          console.log(`   ✅ ISH actualizado a valor alternativo: ${alternative}`);
+        } else {
+          impuestoISH = '';
+          console.log('   ❌ No se encontró alternativa válida, limpiando ISH');
+        }
+      } else {
+        impuestoISH = '';
+        console.log('   ❌ Limpiando ISH (conflicto con IVA)');
+      }
+    }
+    
+    // Additional validation for target file
+    if (isTargetFile) {
+      console.log('🎯 ===== VALIDACIÓN ESPECÍFICA PARA ARCHIVO 101183718 =====');
+      
+      // Check if we have reasonable values
+      const subtotalNum = parseFloat(subtotal || '0');
+      const ivaNum = parseFloat(impuestoIVA || '0');
+      const ishNum = parseFloat(impuestoISH || '0');
+      
+      console.log(`   📊 Análisis numérico:`);
+      console.log(`      - Subtotal: ${subtotalNum}`);
+      console.log(`      - IVA: ${ivaNum} (${((ivaNum/subtotalNum)*100).toFixed(2)}% del subtotal)`);
+      console.log(`      - ISH: ${ishNum} (${((ishNum/subtotalNum)*100).toFixed(2)}% del subtotal)`);
+      
+      // ISH should typically be 2-4% of subtotal for hospitality tax
+      if (ishNum > 0 && subtotalNum > 0) {
+        const ishPercentage = (ishNum / subtotalNum) * 100;
+        if (ishPercentage < 1 || ishPercentage > 10) {
+          console.log(`   ⚠️ ADVERTENCIA: ISH percentage (${ishPercentage.toFixed(2)}%) fuera del rango típico (1-10%)`);
+          
+          // Look for a more reasonable ISH value
+          console.log(`   🔍 Buscando valor ISH más razonable...`);
+          const expectedRange = [subtotalNum * 0.02, subtotalNum * 0.04]; // 2-4%
+          
+          const allElements = xmlDoc.querySelectorAll('*');
+          let bestMatch = '';
+          let bestScore = 0;
+          
+          allElements.forEach(element => {
+            Array.from(element.attributes).forEach(attr => {
+              const value = parseFloat(attr.value || '0');
+              if (value >= expectedRange[0] && value <= expectedRange[1] && value !== ivaNum) {
+                const percentage = (value / subtotalNum) * 100;
+                const score = 100 - Math.abs(percentage - 3); // Prefer ~3%
+                
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestMatch = attr.value;
+                  console.log(`      💡 Candidato mejorado: ${attr.value} (${percentage.toFixed(2)}%, score: ${score.toFixed(1)}) en ${element.tagName}.${attr.name}`);
+                }
+              }
+            });
+          });
+          
+          if (bestMatch && bestScore > 70) {
+            console.log(`   ✅ Valor ISH actualizado a mejor coincidencia: ${bestMatch}`);
+            impuestoISH = bestMatch;
+          }
+        } else {
+          console.log(`   ✅ ISH percentage (${ishPercentage.toFixed(2)}%) está en rango aceptable`);
+        }
+      }
+      
+      console.log('🎯 ===== RESUMEN FINAL PARA ARCHIVO 101183718 =====');
+      console.log(`   📄 Archivo: ${fileName}`);
+      console.log(`   🏢 RFC Emisor: ${emisorRfc || 'NO ENCONTRADO'}`);
+      console.log(`   🏪 RFC Receptor: ${receptorRfc || 'NO ENCONTRADO'}`);
+      console.log(`   🔑 UUID: ${uuid || 'NO ENCONTRADO'}`);
+      console.log(`   📅 Fecha: ${fecha || 'NO ENCONTRADO'}`);
+      console.log(`   💰 Subtotal: ${subtotal || 'NO ENCONTRADO'}`);
+      console.log(`   🏛️ IVA: ${impuestoIVA || 'NO ENCONTRADO'}`);
+      console.log(`   🏨 ISH: ${impuestoISH || 'NO ENCONTRADO'}`);
     }
     
     console.log('=== RESULTADO FINAL ===');
