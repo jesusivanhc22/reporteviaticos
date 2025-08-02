@@ -972,7 +972,7 @@ export const XMLUploader = () => {
               </CardTitle>
               <Button 
                 onClick={exportToExcel}
-                variant="bisoft"
+                variant="outline"
                 size="sm"
                 className="bg-white text-primary hover:bg-white/90 border-white"
               >

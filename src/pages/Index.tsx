@@ -10,7 +10,6 @@ const Index = () => {
               Reporte de viáticos
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Sube tus archivos XML de facturas electrónicas para generar reportes profesionales
             </p>
           </div>
           
