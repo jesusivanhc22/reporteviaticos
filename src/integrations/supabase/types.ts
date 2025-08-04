@@ -14,7 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      travel_expenses: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          description: string
+          expense_date: string
+          id: string
+          receipt_url: string | null
+          travel_request_id: string
+        }
+        Insert: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          description: string
+          expense_date: string
+          id?: string
+          receipt_url?: string | null
+          travel_request_id: string
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          receipt_url?: string | null
+          travel_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_expenses_travel_request_id_fkey"
+            columns: ["travel_request_id"]
+            isOneToOne: false
+            referencedRelation: "travel_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      travel_requests: {
+        Row: {
+          created_at: string
+          description: string | null
+          destination: string
+          end_date: string
+          estimated_amount: number
+          id: string
+          start_date: string
+          status: Database["public"]["Enums"]["travel_request_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          destination: string
+          end_date: string
+          estimated_amount?: number
+          id?: string
+          start_date: string
+          status?: Database["public"]["Enums"]["travel_request_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          destination?: string
+          end_date?: string
+          estimated_amount?: number
+          id?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["travel_request_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +105,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      expense_category: "accommodation" | "transportation" | "meals" | "other"
+      travel_request_status:
+        | "draft"
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +238,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      expense_category: ["accommodation", "transportation", "meals", "other"],
+      travel_request_status: [
+        "draft",
+        "pending",
+        "approved",
+        "rejected",
+        "completed",
+      ],
+    },
   },
 } as const
