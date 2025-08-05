@@ -1,29 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { FileText, PlusCircle, Receipt, LogOut, User } from 'lucide-react';
+import { FileText, PlusCircle, Receipt } from 'lucide-react';
 
 const Home = () => {
   const navigate = useNavigate();
-  const { user, loading, signOut } = useAuth();
-
-  // Redirect to auth if not logged in
-  if (!loading && !user) {
-    navigate('/auth');
-    return null;
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
 
   const menuOptions = [
     {
@@ -46,28 +27,13 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
-      {/* Header with Logo and User Menu */}
-      <div className="w-full py-4 px-6 flex justify-between items-center">
+      {/* Header with Logo */}
+      <div className="w-full py-4 px-6">
         <img 
           src="/lovable-uploads/fff2652c-930a-4f0e-9de2-2005fe936c6f.png" 
           alt="Bisoft Logo" 
           className="h-12 w-auto"
         />
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <User className="w-4 h-4" />
-            {user?.email}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={signOut}
-            className="flex items-center gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Cerrar Sesión
-          </Button>
-        </div>
       </div>
       
       <div className="container mx-auto px-4 py-8">

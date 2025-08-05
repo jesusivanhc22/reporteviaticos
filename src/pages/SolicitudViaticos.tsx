@@ -1,47 +1,10 @@
-import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { TravelRequestForm } from '@/components/TravelRequestForm';
-import { TravelRequestList } from '@/components/TravelRequestList';
-import { ArrowLeft, Plus, List } from 'lucide-react';
+import { ArrowLeft, Construction } from 'lucide-react';
 
 const SolicitudViaticos = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  const handleFormSuccess = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center">
-        <div className="animate-pulse text-center">
-          <div className="w-16 h-16 bg-muted rounded-full mx-auto mb-4"></div>
-          <div className="h-4 bg-muted rounded w-32 mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <h2 className="text-2xl font-bold mb-4">Acceso requerido</h2>
-          <p className="text-muted-foreground mb-6">
-            Debes iniciar sesión para acceder a las solicitudes de viáticos
-          </p>
-          <Button onClick={() => navigate('/auth')} className="bg-gradient-to-r from-primary to-secondary">
-            Iniciar sesión
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
@@ -68,26 +31,47 @@ const SolicitudViaticos = () => {
             </p>
           </div>
 
-          <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8">
-              <TabsTrigger value="list" className="flex items-center gap-2">
-                <List className="w-4 h-4" />
-                Mis solicitudes
-              </TabsTrigger>
-              <TabsTrigger value="create" className="flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Nueva solicitud
-              </TabsTrigger>
-            </TabsList>
+          {/* Coming Soon Card */}
+          <Card className="shadow-elegant border-0 bg-gradient-to-br from-card to-card/90">
+            <CardHeader className="pb-4 bg-gradient-to-r from-primary to-secondary text-white rounded-t-lg">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <Construction className="w-6 h-6" />
+                Próximamente disponible
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 text-center">
+              <div className="mb-6">
+                <Construction className="w-24 h-24 text-primary mx-auto mb-4 opacity-50" />
+                <h3 className="text-2xl font-semibold text-primary mb-4">
+                  Funcionalidad en desarrollo
+                </h3>
+                <p className="text-muted-foreground text-lg">
+                  Estamos trabajando en esta funcionalidad para permitirte crear y gestionar 
+                  solicitudes de viáticos de manera eficiente.
+                </p>
+              </div>
+              
+              <div className="space-y-4 text-left max-w-md mx-auto">
+                <h4 className="font-semibold text-primary">Características que incluirá:</h4>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• Formulario de solicitud de viáticos</li>
+                  <li>• Carga de documentos de respaldo</li>
+                  <li>• Seguimiento de estado de solicitudes</li>
+                  <li>• Aprobaciones y rechazos</li>
+                  <li>• Historial de solicitudes</li>
+                </ul>
+              </div>
 
-            <TabsContent value="list" className="space-y-6">
-              <TravelRequestList refreshTrigger={refreshTrigger} />
-            </TabsContent>
-
-            <TabsContent value="create" className="space-y-6">
-              <TravelRequestForm onSuccess={handleFormSuccess} />
-            </TabsContent>
-          </Tabs>
+              <div className="mt-8">
+                <Button 
+                  onClick={() => navigate('/')}
+                  className="bg-gradient-to-r from-primary to-secondary text-white hover:from-primary/90 hover:to-secondary/90"
+                >
+                  Volver al menú principal
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
