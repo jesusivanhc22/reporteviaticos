@@ -1,10 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { FileText, PlusCircle, Receipt } from 'lucide-react';
+import { FileText, PlusCircle, Receipt, LogOut, User } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   const menuOptions = [
     {
@@ -27,13 +34,28 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
-      {/* Header with Logo */}
-      <div className="w-full py-4 px-6">
+      {/* Header with Logo and User Info */}
+      <div className="w-full py-4 px-6 flex justify-between items-center">
         <img 
           src="/lovable-uploads/fff2652c-930a-4f0e-9de2-2005fe936c6f.png" 
           alt="Bisoft Logo" 
           className="h-12 w-auto"
         />
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <User className="w-4 h-4" />
+            <span>{user?.email}</span>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleSignOut}
+            className="flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar Sesión
+          </Button>
+        </div>
       </div>
       
       <div className="container mx-auto px-4 py-8">
