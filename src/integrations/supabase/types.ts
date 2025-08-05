@@ -135,7 +135,15 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      expense_category: "accommodation" | "transportation" | "meals" | "other"
+      expense_category:
+        | "accommodation"
+        | "transportation"
+        | "meals"
+        | "other"
+        | "hospedaje"
+        | "alimentos"
+        | "lavanderia"
+        | "transporte"
       travel_request_status:
         | "draft"
         | "pending"
@@ -269,7 +277,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      expense_category: ["accommodation", "transportation", "meals", "other"],
+      expense_category: [
+        "accommodation",
+        "transportation",
+        "meals",
+        "other",
+        "hospedaje",
+        "alimentos",
+        "lavanderia",
+        "transporte",
+      ],
       travel_request_status: [
         "draft",
         "pending",
