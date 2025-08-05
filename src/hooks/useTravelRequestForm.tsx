@@ -109,13 +109,56 @@ export const useTravelRequestForm = () => {
     return Object.values(formData.expenses).reduce((total, amount) => total + amount, 0);
   };
 
+  const calculateTripDays = (): number => {
+    if (!formData.start_date || !formData.end_date) return 0;
+    
+    const startDate = new Date(formData.start_date);
+    const endDate = new Date(formData.end_date);
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // At least 1 day if same date
+    return Math.max(1, diffDays);
+  };
+
+  const calculateRecommendedExpenses = (): ExpenseData => {
+    if (!formData.zone_id || !formData.start_date || !formData.end_date) {
+      return { hospedaje: 0, alimentos: 0, lavanderia: 0, transporte: 0 };
+    }
+
+    const days = calculateTripDays();
+    const categories = ['hospedaje', 'alimentos', 'lavanderia', 'transporte'] as const;
+    
+    const recommended: ExpenseData = {
+      hospedaje: 0,
+      alimentos: 0,
+      lavanderia: 0,
+      transporte: 0,
+    };
+
+    categories.forEach(category => {
+      const dailyLimit = getLimitForCategory(formData.zone_id, category);
+      recommended[category] = dailyLimit * days;
+    });
+
+    return recommended;
+  };
+
+  const getTotalLimitForCategory = (zoneId: string, category: string): number => {
+    const dailyLimit = getLimitForCategory(zoneId, category);
+    const days = calculateTripDays();
+    return dailyLimit * days;
+  };
+
   const validateExpenses = (zoneId: string, expenses: ExpenseData) => {
     const errors: string[] = [];
     
     Object.entries(expenses).forEach(([category, amount]) => {
-      const limit = getLimitForCategory(zoneId, category);
-      if (amount > limit) {
-        errors.push(`${category}: $${amount} excede el límite de $${limit}`);
+      const totalLimit = getTotalLimitForCategory(zoneId, category);
+      if (amount > totalLimit) {
+        const dailyLimit = getLimitForCategory(zoneId, category);
+        const days = calculateTripDays();
+        errors.push(`${category}: $${amount.toLocaleString()} excede el límite total de $${totalLimit.toLocaleString()} ($${dailyLimit.toLocaleString()}/día × ${days} días)`);
       }
     });
 
@@ -203,6 +246,9 @@ export const useTravelRequestForm = () => {
     getExpenseLimitsForZone,
     getLimitForCategory,
     getTotalEstimatedAmount,
+    calculateTripDays,
+    calculateRecommendedExpenses,
+    getTotalLimitForCategory,
     validateExpenses,
     submitTravelRequest,
   };

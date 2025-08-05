@@ -27,6 +27,9 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
     zones,
     loading,
     getLimitForCategory,
+    getTotalLimitForCategory,
+    calculateTripDays,
+    calculateRecommendedExpenses,
     getTotalEstimatedAmount,
     validateExpenses,
     submitTravelRequest,
@@ -90,6 +93,9 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
             formData={formData}
             setFormData={setFormData}
             getLimitForCategory={getLimitForCategory}
+            getTotalLimitForCategory={getTotalLimitForCategory}
+            calculateTripDays={calculateTripDays}
+            calculateRecommendedExpenses={calculateRecommendedExpenses}
             validateExpenses={validateExpenses}
           />
         );
