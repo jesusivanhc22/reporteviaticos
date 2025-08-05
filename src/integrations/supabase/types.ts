@@ -98,6 +98,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          zone_id: string | null
         }
         Insert: {
           created_at?: string
@@ -111,6 +112,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          zone_id?: string | null
         }
         Update: {
           created_at?: string
@@ -124,6 +126,68 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_requests_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zone_expense_limits: {
+        Row: {
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          id: string
+          max_amount: number
+          zone_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          id?: string
+          max_amount: number
+          zone_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          id?: string
+          max_amount?: number
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zone_expense_limits_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zones: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
