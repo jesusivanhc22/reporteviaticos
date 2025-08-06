@@ -65,6 +65,63 @@ export type Database = {
         }
         Relationships: []
       }
+      request_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      service_types: {
+        Row: {
+          created_at: string
+          daily_allowance: number
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_allowance?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_allowance?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       travel_expenses: {
         Row: {
           amount: number
@@ -114,6 +171,8 @@ export type Database = {
           end_date: string
           estimated_amount: number
           id: string
+          request_type_id: string | null
+          service_type_id: string | null
           start_date: string
           status: Database["public"]["Enums"]["travel_request_status"]
           title: string
@@ -128,6 +187,8 @@ export type Database = {
           end_date: string
           estimated_amount?: number
           id?: string
+          request_type_id?: string | null
+          service_type_id?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["travel_request_status"]
           title: string
@@ -142,6 +203,8 @@ export type Database = {
           end_date?: string
           estimated_amount?: number
           id?: string
+          request_type_id?: string | null
+          service_type_id?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["travel_request_status"]
           title?: string
@@ -151,6 +214,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "travel_requests_request_type_id_fkey"
+            columns: ["request_type_id"]
+            isOneToOne: false
+            referencedRelation: "request_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_requests_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "travel_requests_zone_id_fkey"
             columns: ["zone_id"]
             isOneToOne: false
@@ -158,6 +235,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
       }
       zone_expense_limits: {
         Row: {
@@ -217,9 +315,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "user"
       expense_category:
         | "accommodation"
         | "transportation"
@@ -362,6 +467,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       expense_category: [
         "accommodation",
         "transportation",
