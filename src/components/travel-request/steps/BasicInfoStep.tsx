@@ -2,18 +2,40 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TravelRequestData, Zone } from '@/hooks/useTravelRequestForm';
+import { TravelRequestData, MexicanState } from '@/hooks/useTravelRequestForm';
 
 interface BasicInfoStepProps {
   formData: TravelRequestData;
   setFormData: (data: TravelRequestData) => void;
-  zones: Zone[];
+  mexicanStates: MexicanState[];
+  calculateTripDays: () => number;
+  getZoneForState: (stateName: string) => string;
+  getDisplayZone: (stateName: string) => string;
 }
 
-export const BasicInfoStep = ({ formData, setFormData, zones }: BasicInfoStepProps) => {
+export const BasicInfoStep = ({ 
+  formData, 
+  setFormData, 
+  mexicanStates, 
+  calculateTripDays,
+  getZoneForState,
+  getDisplayZone 
+}: BasicInfoStepProps) => {
   const updateFormData = (field: keyof TravelRequestData, value: string) => {
     setFormData({ ...formData, [field]: value });
   };
+
+  const handleStateChange = (stateName: string) => {
+    const zoneId = getZoneForState(stateName);
+    setFormData({ 
+      ...formData, 
+      destination: stateName,
+      zone_id: zoneId 
+    });
+  };
+
+  const tripDays = calculateTripDays();
+  const displayZone = formData.destination ? getDisplayZone(formData.destination) : '';
 
   return (
     <div className="space-y-6">
@@ -30,14 +52,22 @@ export const BasicInfoStep = ({ formData, setFormData, zones }: BasicInfoStepPro
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="destination">Destino *</Label>
-          <Input
-            id="destination"
-            value={formData.destination}
-            onChange={(e) => updateFormData('destination', e.target.value)}
-            placeholder="Ej: Ciudad de México, CDMX"
-            className="border-primary/20 focus:border-primary"
-          />
+          <Label htmlFor="destination">Estado destino *</Label>
+          <Select value={formData.destination} onValueChange={handleStateChange}>
+            <SelectTrigger className="border-primary/20 focus:border-primary">
+              <SelectValue placeholder="Seleccione un estado" />
+            </SelectTrigger>
+            <SelectContent className="bg-background border border-border">
+              {mexicanStates.map((state) => (
+                <SelectItem key={state.id} value={state.name}>
+                  <div className="flex justify-between items-center w-full">
+                    <span>{state.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">Zona {state.zone_type}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
@@ -63,24 +93,23 @@ export const BasicInfoStep = ({ formData, setFormData, zones }: BasicInfoStepPro
           />
         </div>
 
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="zone">Zona de viaje *</Label>
-          <Select value={formData.zone_id} onValueChange={(value) => updateFormData('zone_id', value)}>
-            <SelectTrigger className="border-primary/20 focus:border-primary">
-              <SelectValue placeholder="Seleccione una zona" />
-            </SelectTrigger>
-            <SelectContent>
-              {zones.map((zone) => (
-                <SelectItem key={zone.id} value={zone.id}>
-                  <div>
-                    <div className="font-medium">{zone.name}</div>
-                    <div className="text-sm text-muted-foreground">{zone.description}</div>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {displayZone && (
+          <div className="space-y-2">
+            <Label>Zona asignada</Label>
+            <div className="p-3 bg-primary/10 border border-primary/20 rounded-md">
+              <span className="font-medium text-primary">{displayZone}</span>
+            </div>
+          </div>
+        )}
+
+        {tripDays > 0 && (
+          <div className="space-y-2">
+            <Label>Duración del viaje</Label>
+            <div className="p-3 bg-muted/50 border border-border rounded-md">
+              <span className="font-medium">{tripDays} día{tripDays !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="description">Descripción</Label>

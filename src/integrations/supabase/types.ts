@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      mexican_states: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          zone_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          zone_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          zone_type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

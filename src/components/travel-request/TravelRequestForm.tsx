@@ -25,6 +25,7 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
     formData,
     setFormData,
     zones,
+    mexicanStates,
     loading,
     getLimitForCategory,
     getTotalLimitForCategory,
@@ -33,6 +34,8 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
     getTotalEstimatedAmount,
     validateExpenses,
     submitTravelRequest,
+    getZoneForState,
+    getDisplayZone,
   } = useTravelRequestForm();
 
   const progress = (currentStep / STEPS.length) * 100;
@@ -84,7 +87,10 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
           <BasicInfoStep
             formData={formData}
             setFormData={setFormData}
-            zones={zones}
+            mexicanStates={mexicanStates}
+            calculateTripDays={calculateTripDays}
+            getZoneForState={getZoneForState}
+            getDisplayZone={getDisplayZone}
           />
         );
       case 2:

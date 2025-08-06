@@ -8,6 +8,12 @@ export interface Zone {
   description: string;
 }
 
+export interface MexicanState {
+  id: string;
+  name: string;
+  zone_type: 'A' | 'B';
+}
+
 export interface ZoneExpenseLimit {
   id: string;
   zone_id: string;
@@ -35,6 +41,7 @@ export interface TravelRequestData {
 export const useTravelRequestForm = () => {
   const { toast } = useToast();
   const [zones, setZones] = useState<Zone[]>([]);
+  const [mexicanStates, setMexicanStates] = useState<MexicanState[]>([]);
   const [expenseLimits, setExpenseLimits] = useState<ZoneExpenseLimit[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<TravelRequestData>({
@@ -54,6 +61,7 @@ export const useTravelRequestForm = () => {
 
   useEffect(() => {
     fetchZones();
+    fetchMexicanStates();
     fetchExpenseLimits();
   }, []);
 
@@ -74,6 +82,46 @@ export const useTravelRequestForm = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const fetchMexicanStates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('mexican_states')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setMexicanStates(data?.map(state => ({
+        id: state.id,
+        name: state.name,
+        zone_type: state.zone_type as 'A' | 'B'
+      })) || []);
+    } catch (error) {
+      console.error('Error fetching Mexican states:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los estados",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getZoneForState = (stateName: string): string => {
+    const state = mexicanStates.find(s => s.name === stateName);
+    if (!state) return '';
+    
+    // Find the zone with the matching zone type
+    const zone = zones.find(z => 
+      (state.zone_type === 'A' && z.name.includes('A')) ||
+      (state.zone_type === 'B' && z.name.includes('B'))
+    );
+    return zone?.id || '';
+  };
+
+  const getDisplayZone = (stateName: string): string => {
+    const state = mexicanStates.find(s => s.name === stateName);
+    return state ? `Zona ${state.zone_type}` : '';
   };
 
   const fetchExpenseLimits = async () => {
@@ -241,6 +289,7 @@ export const useTravelRequestForm = () => {
     formData,
     setFormData,
     zones,
+    mexicanStates,
     expenseLimits,
     loading,
     getExpenseLimitsForZone,
@@ -251,5 +300,7 @@ export const useTravelRequestForm = () => {
     getTotalLimitForCategory,
     validateExpenses,
     submitTravelRequest,
+    getZoneForState,
+    getDisplayZone,
   };
 };
