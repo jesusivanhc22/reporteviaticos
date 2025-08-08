@@ -21,6 +21,21 @@ export interface ZoneExpenseLimit {
   max_amount: number;
 }
 
+export interface RequestType {
+  id: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+}
+
+export interface ServiceType {
+  id: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+  daily_allowance: number;
+}
+
 export interface ExpenseData {
   hospedaje: number;
   alimentos: number;
@@ -35,6 +50,8 @@ export interface TravelRequestData {
   start_date: string;
   end_date: string;
   zone_id: string;
+  request_type_id: string;
+  service_type_id: string;
   expenses: ExpenseData;
 }
 
@@ -43,6 +60,8 @@ export const useTravelRequestForm = () => {
   const [zones, setZones] = useState<Zone[]>([]);
   const [mexicanStates, setMexicanStates] = useState<MexicanState[]>([]);
   const [expenseLimits, setExpenseLimits] = useState<ZoneExpenseLimit[]>([]);
+  const [requestTypes, setRequestTypes] = useState<RequestType[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<TravelRequestData>({
     title: '',
@@ -51,6 +70,8 @@ export const useTravelRequestForm = () => {
     start_date: '',
     end_date: '',
     zone_id: '',
+    request_type_id: '',
+    service_type_id: '',
     expenses: {
       hospedaje: 0,
       alimentos: 0,
@@ -63,6 +84,8 @@ export const useTravelRequestForm = () => {
     fetchZones();
     fetchMexicanStates();
     fetchExpenseLimits();
+    fetchRequestTypes();
+    fetchServiceTypes();
   }, []);
 
   const fetchZones = async () => {
@@ -103,6 +126,46 @@ export const useTravelRequestForm = () => {
         title: "Error",
         description: "No se pudieron cargar los estados",
         variant: "destructive",
+      });
+    }
+  };
+
+  const fetchRequestTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('request_types')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setRequestTypes(data || []);
+    } catch (error) {
+      console.error('Error fetching request types:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar los tipos de solicitud',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchServiceTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('service_types')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setServiceTypes(data || []);
+    } catch (error) {
+      console.error('Error fetching service types:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar los tipos de servicio',
+        variant: 'destructive',
       });
     }
   };
@@ -244,6 +307,8 @@ export const useTravelRequestForm = () => {
           start_date: formData.start_date,
           end_date: formData.end_date,
           zone_id: formData.zone_id,
+          request_type_id: formData.request_type_id || null,
+          service_type_id: formData.service_type_id ? formData.service_type_id : null,
           estimated_amount: totalAmount,
           status: isDraft ? 'draft' : 'pending'
         });
@@ -263,6 +328,8 @@ export const useTravelRequestForm = () => {
         start_date: '',
         end_date: '',
         zone_id: '',
+        request_type_id: '',
+        service_type_id: '',
         expenses: {
           hospedaje: 0,
           alimentos: 0,
@@ -290,6 +357,8 @@ export const useTravelRequestForm = () => {
     setFormData,
     zones,
     mexicanStates,
+    requestTypes,
+    serviceTypes,
     expenseLimits,
     loading,
     getExpenseLimitsForZone,

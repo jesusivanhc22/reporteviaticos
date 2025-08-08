@@ -1,12 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { FileText, PlusCircle, Receipt, LogOut, User } from 'lucide-react';
+import { FileText, PlusCircle, Receipt, LogOut, User, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Home = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const check = async () => {
+      if (!user) return;
+      const { data } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+      setIsAdmin(!!data);
+    };
+    check();
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -46,6 +58,17 @@ const Home = () => {
             <User className="w-4 h-4" />
             <span>{user?.email}</span>
           </div>
+          {isAdmin && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/admin')}
+              className="flex items-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              Administración
+            </Button>
+          )}
           <Button 
             variant="outline" 
             size="sm" 

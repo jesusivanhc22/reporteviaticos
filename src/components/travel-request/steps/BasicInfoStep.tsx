@@ -2,7 +2,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TravelRequestData, MexicanState } from '@/hooks/useTravelRequestForm';
+import { TravelRequestData, MexicanState, RequestType, ServiceType } from '@/hooks/useTravelRequestForm';
 
 interface BasicInfoStepProps {
   formData: TravelRequestData;
@@ -11,6 +11,8 @@ interface BasicInfoStepProps {
   calculateTripDays: () => number;
   getZoneForState: (stateName: string) => string;
   getDisplayZone: (stateName: string) => string;
+  requestTypes: RequestType[];
+  serviceTypes: ServiceType[];
 }
 
 export const BasicInfoStep = ({ 
@@ -20,6 +22,7 @@ export const BasicInfoStep = ({
   calculateTripDays,
   getZoneForState,
   getDisplayZone 
+  , requestTypes, serviceTypes
 }: BasicInfoStepProps) => {
   const updateFormData = (field: keyof TravelRequestData, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -31,6 +34,14 @@ export const BasicInfoStep = ({
       ...formData, 
       destination: stateName,
       zone_id: zoneId 
+    });
+  };
+
+  const handleRequestTypeChange = (requestTypeId: string) => {
+    setFormData({
+      ...formData,
+      request_type_id: requestTypeId,
+      service_type_id: '' // reset service type when request type changes
     });
   };
 
@@ -57,7 +68,7 @@ export const BasicInfoStep = ({
             <SelectTrigger className="border-primary/20 focus:border-primary">
               <SelectValue placeholder="Seleccione un estado" />
             </SelectTrigger>
-            <SelectContent className="bg-background border border-border">
+            <SelectContent className="bg-background border border-border z-50">
               {mexicanStates.map((state) => (
                 <SelectItem key={state.id} value={state.name}>
                   <div className="flex justify-between items-center w-full">
@@ -69,6 +80,53 @@ export const BasicInfoStep = ({
             </SelectContent>
           </Select>
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="request_type">Tipo de solicitud *</Label>
+          <Select value={formData.request_type_id} onValueChange={handleRequestTypeChange}>
+            <SelectTrigger className="border-primary/20 focus:border-primary">
+              <SelectValue placeholder="Seleccione un tipo de solicitud" />
+            </SelectTrigger>
+            <SelectContent className="bg-background border border-border z-50">
+              {requestTypes.map((type) => (
+                <SelectItem key={type.id} value={type.id}>
+                  <div className="flex flex-col w-full">
+                    <span>{type.name}</span>
+                    {type.description && (
+                      <span className="text-xs text-muted-foreground">{type.description}</span>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {formData.request_type_id && (
+          <div className="space-y-2">
+            <Label htmlFor="service_type">Tipo de servicio (opcional)</Label>
+            <Select value={formData.service_type_id} onValueChange={(val) => updateFormData('service_type_id', val)}>
+              <SelectTrigger className="border-primary/20 focus:border-primary">
+                <SelectValue placeholder="Seleccione un tipo de servicio" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border border-border z-50">
+                {serviceTypes.map((stype) => (
+                  <SelectItem key={stype.id} value={stype.id}>
+                    <div className="flex justify-between items-center w-full">
+                      <span>{stype.name}</span>
+                      {typeof stype.daily_allowance === 'number' && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          ${'{'}stype.daily_allowance.toLocaleString(){'}'} /día
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
 
         <div className="space-y-2">
           <Label htmlFor="start_date">Fecha de inicio *</Label>

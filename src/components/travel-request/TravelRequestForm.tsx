@@ -26,6 +26,8 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
     setFormData,
     zones,
     mexicanStates,
+    requestTypes,
+    serviceTypes,
     loading,
     getLimitForCategory,
     getTotalLimitForCategory,
@@ -44,7 +46,7 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
     switch (step) {
       case 1:
         return !!(formData.title && formData.destination && formData.start_date && 
-                 formData.end_date && formData.zone_id);
+                 formData.end_date && formData.zone_id && formData.request_type_id);
       case 2:
         return true; // Always can proceed from expenses step
       case 3:
@@ -91,6 +93,8 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
             calculateTripDays={calculateTripDays}
             getZoneForState={getZoneForState}
             getDisplayZone={getDisplayZone}
+            requestTypes={requestTypes}
+            serviceTypes={serviceTypes}
           />
         );
       case 2:
@@ -110,6 +114,8 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
           <ReviewStep
             formData={formData}
             zones={zones}
+            requestTypes={requestTypes}
+            serviceTypes={serviceTypes}
             getLimitForCategory={getLimitForCategory}
             getTotalEstimatedAmount={getTotalEstimatedAmount}
           />

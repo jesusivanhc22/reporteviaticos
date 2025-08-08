@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import ReporteViaticos from "./pages/ReporteViaticos";
 import SolicitudViaticos from "./pages/SolicitudViaticos";
 import NotFound from "./pages/NotFound";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,11 @@ const App = () => (
             <Route path="/solicitud-viaticos" element={
               <ProtectedRoute>
                 <SolicitudViaticos />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <Admin />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

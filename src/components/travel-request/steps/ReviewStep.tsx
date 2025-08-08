@@ -2,11 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, MapPin, DollarSign, Building2 } from 'lucide-react';
-import { TravelRequestData, Zone } from '@/hooks/useTravelRequestForm';
+import { TravelRequestData, Zone, RequestType, ServiceType } from '@/hooks/useTravelRequestForm';
 
 interface ReviewStepProps {
   formData: TravelRequestData;
   zones: Zone[];
+  requestTypes: RequestType[];
+  serviceTypes: ServiceType[];
   getLimitForCategory: (zoneId: string, category: string) => number;
   getTotalEstimatedAmount: () => number;
 }
@@ -18,9 +20,11 @@ const EXPENSE_CATEGORIES = [
   { key: 'transporte', label: 'Transporte', icon: DollarSign }
 ];
 
-export const ReviewStep = ({ formData, zones, getLimitForCategory, getTotalEstimatedAmount }: ReviewStepProps) => {
+export const ReviewStep = ({ formData, zones, requestTypes, serviceTypes, getLimitForCategory, getTotalEstimatedAmount }: ReviewStepProps) => {
   const selectedZone = zones.find(zone => zone.id === formData.zone_id);
   const totalAmount = getTotalEstimatedAmount();
+  const selectedRequestType = requestTypes.find(rt => rt.id === formData.request_type_id);
+  const selectedServiceType = serviceTypes.find(st => st.id === formData.service_type_id);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
@@ -56,10 +60,22 @@ export const ReviewStep = ({ formData, zones, getLimitForCategory, getTotalEstim
             <p className="text-muted-foreground">{formData.title || 'Sin título'}</p>
           </div>
           
-          <div>
-            <h4 className="font-semibold text-primary mb-2">Destino:</h4>
-            <p className="text-muted-foreground">{formData.destination || 'Sin destino'}</p>
-          </div>
+            <div>
+              <h4 className="font-semibold text-primary mb-2">Destino:</h4>
+              <p className="text-muted-foreground">{formData.destination || 'Sin destino'}</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-primary mb-2">Tipo de solicitud:</h4>
+              <p className="text-muted-foreground">{selectedRequestType?.name || 'Sin tipo'}</p>
+            </div>
+
+            {formData.service_type_id && (
+              <div>
+                <h4 className="font-semibold text-primary mb-2">Tipo de servicio:</h4>
+                <p className="text-muted-foreground">{selectedServiceType?.name}</p>
+              </div>
+            )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
