@@ -47,6 +47,8 @@ export const BasicInfoStep = ({
 
   const tripDays = calculateTripDays();
   const displayZone = formData.destination ? getDisplayZone(formData.destination) : '';
+  const selectedRequestType = requestTypes.find((t) => t.id === formData.request_type_id);
+  const isImplementacion = selectedRequestType?.name?.toLowerCase() === 'implementación' || selectedRequestType?.name?.toLowerCase() === 'implementacion';
 
   return (
     <div className="space-y-6">
@@ -102,7 +104,7 @@ export const BasicInfoStep = ({
           </Select>
         </div>
 
-        {formData.request_type_id && (
+        {isImplementacion && (
           <div className="space-y-2">
             <Label htmlFor="service_type">Tipo de servicio (opcional)</Label>
             <Select value={formData.service_type_id} onValueChange={(val) => updateFormData('service_type_id', val)}>
@@ -110,18 +112,24 @@ export const BasicInfoStep = ({
                 <SelectValue placeholder="Seleccione un tipo de servicio" />
               </SelectTrigger>
               <SelectContent className="bg-background border border-border z-50">
-                {serviceTypes.map((stype) => (
-                  <SelectItem key={stype.id} value={stype.id}>
-                    <div className="flex justify-between items-center w-full">
-                      <span>{stype.name}</span>
-                      {typeof stype.daily_allowance === 'number' && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          ${'{'}stype.daily_allowance.toLocaleString(){'}'} /día
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
+                {serviceTypes.map((stype) => {
+                  const raw = stype.name || '';
+                  const lower = raw.toLowerCase();
+                  const baseName = lower.includes('full') ? 'Full' : lower.includes('standard') ? 'Standard' : raw.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '').trim();
+                  const limit = baseName === 'Full' ? '$250,000.00' : baseName === 'Standard' ? '$150,000.00' : undefined;
+                  return (
+                    <SelectItem key={stype.id} value={stype.id}>
+                      <div className="flex justify-between items-center w-full">
+                        <span>{baseName}</span>
+                        {limit && (
+                          <span className="text-xs text-muted-foreground ml-2">
+                            Límite de viáticos: {limit}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>

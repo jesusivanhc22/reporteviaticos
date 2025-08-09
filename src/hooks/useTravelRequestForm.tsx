@@ -225,10 +225,13 @@ export const useTravelRequestForm = () => {
     
     const startDate = new Date(formData.start_date);
     const endDate = new Date(formData.end_date);
-    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const dayMs = 1000 * 60 * 60 * 24;
+    // Normalize to midnight to avoid TZ issues and count both start and end days (+1)
+    const startMid = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
+    const endMid = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()).getTime();
+    const diffTime = Math.abs(endMid - startMid);
+    const diffDays = Math.floor(diffTime / dayMs) + 1;
     
-    // At least 1 day if same date
     return Math.max(1, diffDays);
   };
 
@@ -249,7 +252,16 @@ export const useTravelRequestForm = () => {
 
     categories.forEach(category => {
       const dailyLimit = getLimitForCategory(formData.zone_id, category);
-      recommended[category] = dailyLimit * days;
+      if (category === 'lavanderia') {
+        if (days > 5) {
+          const perDayLaundry = dailyLimit / 5; // e.g., 350/5 = 70
+          recommended.lavanderia = perDayLaundry * days; // e.g., 13 * 70 = 910
+        } else {
+          recommended.lavanderia = 0;
+        }
+      } else {
+        recommended[category] = dailyLimit * days;
+      }
     });
 
     return recommended;
