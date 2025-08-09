@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      collaborators: {
+        Row: {
+          created_at: string
+          full_name: string
+          gender: Database["public"]["Enums"]["collaborator_gender"]
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          gender: Database["public"]["Enums"]["collaborator_gender"]
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          gender?: Database["public"]["Enums"]["collaborator_gender"]
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mexican_states: {
         Row: {
           created_at: string
@@ -163,6 +190,42 @@ export type Database = {
           },
         ]
       }
+      travel_request_collaborators: {
+        Row: {
+          collaborator_id: string
+          created_at: string
+          id: string
+          travel_request_id: string
+        }
+        Insert: {
+          collaborator_id: string
+          created_at?: string
+          id?: string
+          travel_request_id: string
+        }
+        Update: {
+          collaborator_id?: string
+          created_at?: string
+          id?: string
+          travel_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_request_collaborators_collaborator_id_fkey"
+            columns: ["collaborator_id"]
+            isOneToOne: false
+            referencedRelation: "collaborators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_request_collaborators_travel_request_id_fkey"
+            columns: ["travel_request_id"]
+            isOneToOne: false
+            referencedRelation: "travel_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       travel_requests: {
         Row: {
           created_at: string
@@ -171,6 +234,7 @@ export type Database = {
           end_date: string
           estimated_amount: number
           id: string
+          number_of_rooms: number | null
           request_type_id: string | null
           service_type_id: string | null
           start_date: string
@@ -187,6 +251,7 @@ export type Database = {
           end_date: string
           estimated_amount?: number
           id?: string
+          number_of_rooms?: number | null
           request_type_id?: string | null
           service_type_id?: string | null
           start_date: string
@@ -203,6 +268,7 @@ export type Database = {
           end_date?: string
           estimated_amount?: number
           id?: string
+          number_of_rooms?: number | null
           request_type_id?: string | null
           service_type_id?: string | null
           start_date?: string
@@ -325,6 +391,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      collaborator_gender: "male" | "female" | "other"
       expense_category:
         | "accommodation"
         | "transportation"
@@ -468,6 +535,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      collaborator_gender: ["male", "female", "other"],
       expense_category: [
         "accommodation",
         "transportation",

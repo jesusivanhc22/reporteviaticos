@@ -28,6 +28,7 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
     mexicanStates,
     requestTypes,
     serviceTypes,
+    availableCollaborators,
     loading,
     getLimitForCategory,
     getTotalLimitForCategory,
@@ -44,9 +45,18 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
 
   const canProceedFromStep = (step: number): boolean => {
     switch (step) {
-      case 1:
-        return !!(formData.title && formData.destination && formData.start_date && 
+      case 1: {
+        const basicOk = !!(formData.title && formData.destination && formData.start_date && 
                  formData.end_date && formData.zone_id && formData.request_type_id);
+        const collCount = formData.collaborators?.length || 0;
+        if (collCount > 1) {
+          const rooms = formData.number_of_rooms ?? 0;
+          const minRooms = Math.ceil(collCount / 2);
+          const validRooms = rooms >= minRooms && rooms <= collCount;
+          return basicOk && validRooms;
+        }
+        return basicOk;
+      }
       case 2:
         return true; // Always can proceed from expenses step
       case 3:
@@ -95,6 +105,7 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
             getDisplayZone={getDisplayZone}
             requestTypes={requestTypes}
             serviceTypes={serviceTypes}
+            availableCollaborators={availableCollaborators}
           />
         );
       case 2:

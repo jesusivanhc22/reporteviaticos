@@ -36,6 +36,13 @@ export interface ServiceType {
   daily_allowance: number;
 }
 
+export interface Collaborator {
+  id: string;
+  full_name: string;
+  gender: 'male' | 'female' | 'other';
+  is_active: boolean;
+}
+
 export interface ExpenseData {
   hospedaje: number;
   alimentos: number;
@@ -52,6 +59,8 @@ export interface TravelRequestData {
   zone_id: string;
   request_type_id: string;
   service_type_id: string;
+  collaborators: string[]; // selected collaborator IDs
+  number_of_rooms: number | null;
   expenses: ExpenseData;
 }
 
@@ -62,6 +71,7 @@ export const useTravelRequestForm = () => {
   const [expenseLimits, setExpenseLimits] = useState<ZoneExpenseLimit[]>([]);
   const [requestTypes, setRequestTypes] = useState<RequestType[]>([]);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+  const [availableCollaborators, setAvailableCollaborators] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<TravelRequestData>({
     title: '',
@@ -72,6 +82,8 @@ export const useTravelRequestForm = () => {
     zone_id: '',
     request_type_id: '',
     service_type_id: '',
+    collaborators: [],
+    number_of_rooms: null,
     expenses: {
       hospedaje: 0,
       alimentos: 0,
@@ -86,6 +98,7 @@ export const useTravelRequestForm = () => {
     fetchExpenseLimits();
     fetchRequestTypes();
     fetchServiceTypes();
+    fetchCollaborators();
   }, []);
 
   const fetchZones = async () => {
@@ -165,6 +178,26 @@ export const useTravelRequestForm = () => {
       toast({
         title: 'Error',
         description: 'No se pudieron cargar los tipos de servicio',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchCollaborators = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('collaborators')
+        .select('id, full_name, gender, is_active')
+        .eq('is_active', true)
+        .order('full_name');
+
+      if (error) throw error;
+      setAvailableCollaborators(data || []);
+    } catch (error) {
+      console.error('Error fetching collaborators:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar los colaboradores',
         variant: 'destructive',
       });
     }
@@ -309,7 +342,7 @@ export const useTravelRequestForm = () => {
 
       const totalAmount = getTotalEstimatedAmount();
 
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('travel_requests')
         .insert({
           user_id: user.id,
@@ -321,11 +354,25 @@ export const useTravelRequestForm = () => {
           zone_id: formData.zone_id,
           request_type_id: formData.request_type_id || null,
           service_type_id: formData.service_type_id ? formData.service_type_id : null,
+          number_of_rooms: formData.number_of_rooms ?? null,
           estimated_amount: totalAmount,
           status: isDraft ? 'draft' : 'pending'
-        });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
+
+      const requestId = inserted?.id;
+
+      if (requestId && formData.collaborators && formData.collaborators.length > 0) {
+        const rows = formData.collaborators.map((cid) => ({
+          travel_request_id: requestId,
+          collaborator_id: cid,
+        }));
+        const { error: linkErr } = await supabase.from('travel_request_collaborators').insert(rows);
+        if (linkErr) throw linkErr;
+      }
 
       toast({
         title: "Éxito",
@@ -342,6 +389,8 @@ export const useTravelRequestForm = () => {
         zone_id: '',
         request_type_id: '',
         service_type_id: '',
+        collaborators: [],
+        number_of_rooms: null,
         expenses: {
           hospedaje: 0,
           alimentos: 0,
@@ -371,6 +420,7 @@ export const useTravelRequestForm = () => {
     mexicanStates,
     requestTypes,
     serviceTypes,
+    availableCollaborators,
     expenseLimits,
     loading,
     getExpenseLimitsForZone,
