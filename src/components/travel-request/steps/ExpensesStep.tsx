@@ -11,6 +11,7 @@ interface ExpensesStepProps {
   getLimitForCategory: (zoneId: string, category: string) => number;
   getTotalLimitForCategory: (zoneId: string, category: string) => number;
   calculateTripDays: () => number;
+  calculateHotelNights: () => number;
   calculateRecommendedExpenses: () => ExpenseData;
   validateExpenses: (zoneId: string, expenses: ExpenseData) => string[];
 }
@@ -26,9 +27,10 @@ export const ExpensesStep = ({
   formData, 
   setFormData, 
   getLimitForCategory, 
-  getTotalLimitForCategory,
-  calculateTripDays,
-  calculateRecommendedExpenses,
+  getTotalLimitForCategory, 
+  calculateTripDays, 
+  calculateHotelNights,
+  calculateRecommendedExpenses, 
   validateExpenses 
 }: ExpensesStepProps) => {
   const updateExpense = (category: keyof ExpenseData, value: string) => {
@@ -45,6 +47,7 @@ export const ExpensesStep = ({
   const validationErrors = formData.zone_id ? validateExpenses(formData.zone_id, formData.expenses) : [];
   const totalAmount = Object.values(formData.expenses).reduce((sum, amount) => sum + amount, 0);
   const tripDays = calculateTripDays();
+  const hotelNights = calculateHotelNights();
   const recommendedExpenses = calculateRecommendedExpenses();
   
   const handleAutoFill = () => {
@@ -74,7 +77,7 @@ export const ExpensesStep = ({
             <div className="flex items-center gap-2">
               <Calculator className="h-5 w-5 text-primary" />
               <h4 className="font-semibold text-primary">
-                Cálculo automático para {tripDays} día{tripDays > 1 ? 's' : ''}
+                Cálculo automático para {tripDays} día{tripDays > 1 ? 's' : ''} ({hotelNights} noche{hotelNights !== 1 ? 's' : ''} de hotel)
               </h4>
             </div>
             <Button 
@@ -95,7 +98,7 @@ export const ExpensesStep = ({
                 <div key={category.key} className="text-center">
                   <div className="font-medium text-primary">{category.label}</div>
                   <div className="text-muted-foreground">
-                    ${dailyLimit.toLocaleString()}/día
+                    ${dailyLimit.toLocaleString()}/{category.key === 'hospedaje' ? 'noche' : 'día'}
                   </div>
                   <div className="font-semibold text-primary">
                     Total: ${recommendedTotal.toLocaleString()}
@@ -120,9 +123,13 @@ export const ExpensesStep = ({
                 <span>{category.label}</span>
                 <span className="text-sm text-muted-foreground">
                   {tripDays > 0 ? (
-                    `${dailyLimit.toLocaleString()}/día × ${tripDays} = $${totalLimit.toLocaleString()}`
+                    category.key === 'hospedaje' 
+                      ? `${dailyLimit.toLocaleString()}/noche × ${hotelNights} = $${totalLimit.toLocaleString()}`
+                      : `${dailyLimit.toLocaleString()}/día × ${tripDays} = $${totalLimit.toLocaleString()}`
                   ) : (
-                    `Límite diario: $${dailyLimit.toLocaleString()}`
+                    category.key === 'hospedaje'
+                      ? `Límite por noche: $${dailyLimit.toLocaleString()}`
+                      : `Límite diario: $${dailyLimit.toLocaleString()}`
                   )}
                 </span>
               </Label>
@@ -188,7 +195,9 @@ export const ExpensesStep = ({
             return (
               <div key={category.key} className="text-center">
                 <div className="font-medium">{category.label}</div>
-                <div className="text-muted-foreground">${dailyLimit.toLocaleString()}/día</div>
+                <div className="text-muted-foreground">
+                  ${dailyLimit.toLocaleString()}/{category.key === 'hospedaje' ? 'noche' : 'día'}
+                </div>
                 {tripDays > 0 && (
                   <div className="font-semibold text-primary">
                     Total: ${totalLimit.toLocaleString()}

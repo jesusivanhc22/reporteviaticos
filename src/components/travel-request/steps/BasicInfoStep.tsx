@@ -213,7 +213,9 @@ export const BasicInfoStep = ({
           <div className="space-y-2">
             <Label>Duración del viaje</Label>
             <div className="p-3 bg-muted/50 border border-border rounded-md">
-              <span className="font-medium">{tripDays} día{tripDays !== 1 ? 's' : ''}</span>
+              <span className="font-medium">
+                {tripDays} día{tripDays !== 1 ? 's' : ''} ({Math.max(0, tripDays - 1)} noche{Math.max(0, tripDays - 1) !== 1 ? 's' : ''} de hotel)
+              </span>
             </div>
           </div>
         )}

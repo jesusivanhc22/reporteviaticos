@@ -33,6 +33,7 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
     getLimitForCategory,
     getTotalLimitForCategory,
     calculateTripDays,
+    calculateHotelNights,
     calculateRecommendedExpenses,
     getTotalEstimatedAmount,
     validateExpenses,
@@ -116,6 +117,7 @@ export const TravelRequestForm = ({ onBack, onSuccess }: TravelRequestFormProps)
             getLimitForCategory={getLimitForCategory}
             getTotalLimitForCategory={getTotalLimitForCategory}
             calculateTripDays={calculateTripDays}
+            calculateHotelNights={calculateHotelNights}
             calculateRecommendedExpenses={calculateRecommendedExpenses}
             validateExpenses={validateExpenses}
           />

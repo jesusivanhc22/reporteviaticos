@@ -268,12 +268,18 @@ export const useTravelRequestForm = () => {
     return Math.max(1, diffDays);
   };
 
+  const calculateHotelNights = (): number => {
+    const tripDays = calculateTripDays();
+    return Math.max(0, tripDays - 1);
+  };
+
   const calculateRecommendedExpenses = (): ExpenseData => {
     if (!formData.zone_id || !formData.start_date || !formData.end_date) {
       return { hospedaje: 0, alimentos: 0, lavanderia: 0, transporte: 0 };
     }
 
     const days = calculateTripDays();
+    const nights = calculateHotelNights();
     const categories = ['hospedaje', 'alimentos', 'lavanderia', 'transporte'] as const;
     
     const recommended: ExpenseData = {
@@ -285,7 +291,9 @@ export const useTravelRequestForm = () => {
 
     categories.forEach(category => {
       const dailyLimit = getLimitForCategory(formData.zone_id, category);
-      if (category === 'lavanderia') {
+      if (category === 'hospedaje') {
+        recommended.hospedaje = dailyLimit * nights;
+      } else if (category === 'lavanderia') {
         if (days > 5) {
           const perDayLaundry = dailyLimit / 5; // e.g., 350/5 = 70
           recommended.lavanderia = perDayLaundry * days; // e.g., 13 * 70 = 910
@@ -302,6 +310,10 @@ export const useTravelRequestForm = () => {
 
   const getTotalLimitForCategory = (zoneId: string, category: string): number => {
     const dailyLimit = getLimitForCategory(zoneId, category);
+    if (category === 'hospedaje') {
+      const nights = calculateHotelNights();
+      return dailyLimit * nights;
+    }
     const days = calculateTripDays();
     return dailyLimit * days;
   };
@@ -313,8 +325,13 @@ export const useTravelRequestForm = () => {
       const totalLimit = getTotalLimitForCategory(zoneId, category);
       if (amount > totalLimit) {
         const dailyLimit = getLimitForCategory(zoneId, category);
-        const days = calculateTripDays();
-        errors.push(`${category}: $${amount.toLocaleString()} excede el límite total de $${totalLimit.toLocaleString()} ($${dailyLimit.toLocaleString()}/día × ${days} días)`);
+        if (category === 'hospedaje') {
+          const nights = calculateHotelNights();
+          errors.push(`${category}: $${amount.toLocaleString()} excede el límite total de $${totalLimit.toLocaleString()} ($${dailyLimit.toLocaleString()}/noche × ${nights} noches)`);
+        } else {
+          const days = calculateTripDays();
+          errors.push(`${category}: $${amount.toLocaleString()} excede el límite total de $${totalLimit.toLocaleString()} ($${dailyLimit.toLocaleString()}/día × ${days} días)`);
+        }
       }
     });
 
@@ -427,6 +444,7 @@ export const useTravelRequestForm = () => {
     getLimitForCategory,
     getTotalEstimatedAmount,
     calculateTripDays,
+    calculateHotelNights,
     calculateRecommendedExpenses,
     getTotalLimitForCategory,
     validateExpenses,
